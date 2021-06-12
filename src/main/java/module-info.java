@@ -1,4 +1,4 @@
 module grondag.bitraster {
-	requires jdk.incubator.vector;
+	//requires jdk.incubator.vector;
 	exports grondag.bitraster;
 }

@@ -724,19 +724,7 @@ public class BoxOccluder {
 		return needsRedraw;
 	}
 
-	final MicroTimer timer = new MicroTimer("boxTests.apply", 500000);
-
-	// baseline
-	//	[11:29:18] [Render thread/INFO] (Minecraft) [STDOUT]: Avg boxTests.apply duration = 976 ns, min = 280, max = 177222, total duration = 488, total runs = 500,000
-	//	[11:29:20] [Render thread/INFO] (Minecraft) [STDOUT]: Avg boxTests.apply duration = 949 ns, min = 281, max = 47392, total duration = 474, total runs = 500,000
-	//	[11:29:22] [Render thread/INFO] (Minecraft) [STDOUT]: Avg boxTests.apply duration = 962 ns, min = 293, max = 363102, total duration = 481, total runs = 500,000
-	//	[11:29:24] [Render thread/INFO] (Minecraft) [STDOUT]: Avg boxTests.apply duration = 932 ns, min = 304, max = 39615, total duration = 466, total runs = 500,000
-	//	[11:29:26] [Render thread/INFO] (Minecraft) [STDOUT]: Avg boxTests.apply duration = 964 ns, min = 312, max = 218238, total duration = 482, total runs = 500,000
-	//	[11:29:28] [Render thread/INFO] (Minecraft) [STDOUT]: Avg boxTests.apply duration = 957 ns, min = 310, max = 4753785, total duration = 478, total runs = 500,000
-	//	[11:29:29] [Render thread/INFO] (Minecraft) [STDOUT]: Avg boxTests.apply duration = 912 ns, min = 290, max = 104227, total duration = 456, total runs = 500,000
-	//	[11:29:31] [Render thread/INFO] (Minecraft) [STDOUT]: Avg boxTests.apply duration = 910 ns, min = 303, max = 69905, total duration = 455, total runs = 500,000
-	//	[11:29:33] [Render thread/INFO] (Minecraft) [STDOUT]: Avg boxTests.apply duration = 928 ns, min = 298, max = 100685, total duration = 464, total runs = 500,000
-	//	[11:29:35] [Render thread/INFO] (Minecraft) [STDOUT]: Avg boxTests.apply duration = 899 ns, min = 296, max = 170822, total duration = 449, total runs = 500,000
+	//final MicroTimer timer = new MicroTimer("boxTests.apply", 500000);
 
 	/**
 	 * Does not rely on winding order but instead the distance from
@@ -775,12 +763,12 @@ public class BoxOccluder {
 			outcome |= NORTH;
 		}
 
-		timer.start();
-		final boolean result = boxTests[outcome].apply(x0, y0, z0, x1, y1, z1);
-		timer.stop();
-
-		return result;
-		//return boxTests[outcome].apply(x0, y0, z0, x1, y1, z1);
+		//		timer.start();
+		//		final boolean result = boxTests[outcome].apply(x0, y0, z0, x1, y1, z1);
+		//		timer.stop();
+		//
+		//		return result;
+		return boxTests[outcome].apply(x0, y0, z0, x1, y1, z1);
 	}
 
 	public final boolean isEmptyRegionVisible(int originX, int originY, int originZ) {
