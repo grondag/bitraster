@@ -1,9 +1,11 @@
-package grondag.bitraster;
+package grondag.bitraster.test;
 
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.jupiter.api.Test;
+
+import grondag.bitraster.PackedBox;
 
 class PackedBoxTest {
 	@Test

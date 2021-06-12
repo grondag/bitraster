@@ -738,7 +738,6 @@ public class BoxOccluder {
 	//	[11:29:33] [Render thread/INFO] (Minecraft) [STDOUT]: Avg boxTests.apply duration = 928 ns, min = 298, max = 100685, total duration = 464, total runs = 500,000
 	//	[11:29:35] [Render thread/INFO] (Minecraft) [STDOUT]: Avg boxTests.apply duration = 899 ns, min = 296, max = 170822, total duration = 449, total runs = 500,000
 
-
 	/**
 	 * Does not rely on winding order but instead the distance from
 	 * plane with known facing to camera position.
