@@ -37,24 +37,24 @@ import static grondag.bitraster.Constants.WEST;
 
 import java.util.function.Consumer;
 
-public class BoxOccluder {
+public abstract class BoxOccluder {
 	/** How close face must be to trigger aggressive refresh of occlusion. */
 	private static final int NEAR_RANGE = 8 << CAMERA_PRECISION_BITS;
 
 	private final Matrix4L baseMvpMatrix = new Matrix4L();
 
-	protected final Rasterizer raster = new Rasterizer();
+	protected final AbstractRasterizer raster;
 	private int occluderVersion = 1;
-	private final BoxTest[] boxTests = new BoxTest[128];
-	private final BoxDraw[] boxDraws = new BoxDraw[128];
+	protected final BoxTest[] boxTests = new BoxTest[128];
+	protected final BoxDraw[] boxDraws = new BoxDraw[128];
 	private long viewX;
 	private long viewY;
 	private long viewZ;
 	// Add these to region-relative box coordinates to get camera-relative coordinates
 	// They are in camera fixed precision.
-	private int offsetX;
-	private int offsetY;
-	private int offsetZ;
+	protected int offsetX;
+	protected int offsetY;
+	protected int offsetZ;
 	private int occlusionRange;
 	private int regionSquaredChunkDist;
 	private int viewVersion = -1;
@@ -64,13 +64,9 @@ public class BoxOccluder {
 	private int maxSquaredChunkDistance;
 	private boolean hasNearOccluders = false;
 
-	@Override
-	public final String toString() {
-		return String.format("OccluderVersion:%d  viewX:%d  viewY:%d  viewZ:%d  offsetX:%d  offsetY:%d  offsetZ:%d viewVersion:%d  regionVersion:%d  forceRedraw:%b  needsRedraw:%b  matrix:%s",
-				occluderVersion, viewX, viewY, viewZ, offsetX, offsetY, offsetZ, viewVersion, regionVersion, forceRedraw, needsRedraw, raster.mvpMatrix.toString());
-	}
+	public BoxOccluder(AbstractRasterizer raster) {
+		this.raster = raster;
 
-	{
 		boxTests[0] = (x0, y0, z0, x1, y1, z1) -> {
 			return false;
 		};
@@ -131,8 +127,8 @@ public class BoxOccluder {
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			return raster.testQuad(V010, V011, V111, V101)
-					|| raster.testQuad(V101, V100, V110, V010);
+			return raster.testQuad(V110, V010, V011, V111)
+					|| raster.testQuad(V101, V100, V110, V111);
 		};
 
 		boxTests[UP | WEST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -142,8 +138,8 @@ public class BoxOccluder {
 			raster.setupVertex(V011, x0, y1, z1);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			return raster.testQuad(V111, V110, V010, V000)
-					|| raster.testQuad(V000, V001, V011, V111);
+			return raster.testQuad(V110, V010, V011, V111)
+					|| raster.testQuad(V000, V001, V011, V010);
 		};
 
 		boxTests[UP | NORTH] = (x0, y0, z0, x1, y1, z1) -> {
@@ -153,8 +149,8 @@ public class BoxOccluder {
 			raster.setupVertex(V100, x1, y0, z0);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			return raster.testQuad(V011, V111, V110, V100)
-					|| raster.testQuad(V100, V000, V010, V011);
+			return raster.testQuad(V110, V010, V011, V111)
+					|| raster.testQuad(V100, V000, V010, V110);
 		};
 
 		boxTests[UP | SOUTH] = (x0, y0, z0, x1, y1, z1) -> {
@@ -164,8 +160,8 @@ public class BoxOccluder {
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			return raster.testQuad(V110, V010, V011, V001)
-					|| raster.testQuad(V001, V101, V111, V110);
+			return raster.testQuad(V110, V010, V011, V111)
+					|| raster.testQuad(V001, V101, V111, V011);
 		};
 
 		boxTests[DOWN | EAST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -175,8 +171,8 @@ public class BoxOccluder {
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			return raster.testQuad(V001, V000, V100, V110)
-					|| raster.testQuad(V110, V111, V101, V001);
+			return raster.testQuad(V000, V100, V101, V001)
+					|| raster.testQuad(V101, V100, V110, V111);
 		};
 
 		boxTests[DOWN | WEST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -186,8 +182,8 @@ public class BoxOccluder {
 			raster.setupVertex(V011, x0, y1, z1);
 			raster.setupVertex(V100, x1, y0, z0);
 			raster.setupVertex(V101, x1, y0, z1);
-			return raster.testQuad(V100, V101, V001, V011)
-					|| raster.testQuad(V011, V010, V000, V100);
+			return raster.testQuad(V000, V100, V101, V001)
+					|| raster.testQuad(V000, V001, V011, V010);
 		};
 
 		boxTests[DOWN | NORTH] = (x0, y0, z0, x1, y1, z1) -> {
@@ -197,8 +193,8 @@ public class BoxOccluder {
 			raster.setupVertex(V100, x1, y0, z0);
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V110, x1, y1, z0);
-			return raster.testQuad(V101, V001, V000, V010)
-					|| raster.testQuad(V010, V110, V100, V101);
+			return raster.testQuad(V000, V100, V101, V001)
+					|| raster.testQuad(V100, V000, V010, V110);
 		};
 
 		boxTests[DOWN | SOUTH] = (x0, y0, z0, x1, y1, z1) -> {
@@ -208,8 +204,8 @@ public class BoxOccluder {
 			raster.setupVertex(V100, x1, y0, z0);
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V111, x1, y1, z1);
-			return raster.testQuad(V000, V100, V101, V111)
-					|| raster.testQuad(V111, V011, V001, V000);
+			return raster.testQuad(V000, V100, V101, V001)
+					|| raster.testQuad(V001, V101, V111, V011);
 		};
 
 		boxTests[NORTH | EAST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -219,8 +215,8 @@ public class BoxOccluder {
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			return raster.testQuad(V000, V010, V110, V111)
-					|| raster.testQuad(V111, V101, V100, V000);
+			return raster.testQuad(V100, V000, V010, V110)
+					|| raster.testQuad(V101, V100, V110, V111);
 		};
 
 		boxTests[NORTH | WEST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -230,8 +226,8 @@ public class BoxOccluder {
 			raster.setupVertex(V011, x0, y1, z1);
 			raster.setupVertex(V100, x1, y0, z0);
 			raster.setupVertex(V110, x1, y1, z0);
-			return raster.testQuad(V110, V100, V000, V001)
-					|| raster.testQuad(V001, V011, V010, V110);
+			return raster.testQuad(V100, V000, V010, V110)
+					|| raster.testQuad(V000, V001, V011, V010);
 		};
 
 		boxTests[SOUTH | EAST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -241,8 +237,8 @@ public class BoxOccluder {
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			return raster.testQuad(V011, V001, V101, V100)
-					|| raster.testQuad(V100, V110, V111, V011);
+			return raster.testQuad(V001, V101, V111, V011)
+					|| raster.testQuad(V101, V100, V110, V111);
 		};
 
 		boxTests[SOUTH | WEST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -252,8 +248,8 @@ public class BoxOccluder {
 			raster.setupVertex(V011, x0, y1, z1);
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V111, x1, y1, z1);
-			return raster.testQuad(V101, V111, V011, V010)
-					|| raster.testQuad(V010, V000, V001, V101);
+			return raster.testQuad(V001, V101, V111, V011)
+					|| raster.testQuad(V000, V001, V011, V010);
 		};
 
 		// NB: When three faces are visible, omit nearest vertex and draw two quads instead of three.
@@ -408,8 +404,8 @@ public class BoxOccluder {
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			raster.drawQuad(V010, V011, V111, V101);
-			raster.drawQuad(V101, V100, V110, V010);
+			raster.drawQuad(V110, V010, V011, V111);
+			raster.drawQuad(V101, V100, V110, V111);
 		};
 
 		boxDraws[UP | WEST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -419,8 +415,8 @@ public class BoxOccluder {
 			raster.setupVertex(V011, x0, y1, z1);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			raster.drawQuad(V111, V110, V010, V000);
-			raster.drawQuad(V000, V001, V011, V111);
+			raster.drawQuad(V110, V010, V011, V111);
+			raster.drawQuad(V000, V001, V011, V010);
 		};
 
 		boxDraws[UP | NORTH] = (x0, y0, z0, x1, y1, z1) -> {
@@ -430,8 +426,8 @@ public class BoxOccluder {
 			raster.setupVertex(V100, x1, y0, z0);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			raster.drawQuad(V011, V111, V110, V100);
-			raster.drawQuad(V100, V000, V010, V011);
+			raster.drawQuad(V110, V010, V011, V111);
+			raster.drawQuad(V100, V000, V010, V110);
 		};
 
 		boxDraws[UP | SOUTH] = (x0, y0, z0, x1, y1, z1) -> {
@@ -441,8 +437,8 @@ public class BoxOccluder {
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			raster.drawQuad(V110, V010, V011, V001);
-			raster.drawQuad(V001, V101, V111, V110);
+			raster.drawQuad(V110, V010, V011, V111);
+			raster.drawQuad(V001, V101, V111, V011);
 		};
 
 		boxDraws[DOWN | EAST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -452,8 +448,8 @@ public class BoxOccluder {
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			raster.drawQuad(V001, V000, V100, V110);
-			raster.drawQuad(V110, V111, V101, V001);
+			raster.drawQuad(V000, V100, V101, V001);
+			raster.drawQuad(V101, V100, V110, V111);
 		};
 
 		boxDraws[DOWN | WEST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -463,8 +459,8 @@ public class BoxOccluder {
 			raster.setupVertex(V011, x0, y1, z1);
 			raster.setupVertex(V100, x1, y0, z0);
 			raster.setupVertex(V101, x1, y0, z1);
-			raster.drawQuad(V100, V101, V001, V011);
-			raster.drawQuad(V011, V010, V000, V100);
+			raster.drawQuad(V000, V100, V101, V001);
+			raster.drawQuad(V000, V001, V011, V010);
 		};
 
 		boxDraws[DOWN | NORTH] = (x0, y0, z0, x1, y1, z1) -> {
@@ -474,8 +470,8 @@ public class BoxOccluder {
 			raster.setupVertex(V100, x1, y0, z0);
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V110, x1, y1, z0);
-			raster.drawQuad(V101, V001, V000, V010);
-			raster.drawQuad(V010, V110, V100, V101);
+			raster.drawQuad(V000, V100, V101, V001);
+			raster.drawQuad(V100, V000, V010, V110);
 		};
 
 		boxDraws[DOWN | SOUTH] = (x0, y0, z0, x1, y1, z1) -> {
@@ -485,8 +481,8 @@ public class BoxOccluder {
 			raster.setupVertex(V100, x1, y0, z0);
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V111, x1, y1, z1);
-			raster.drawQuad(V000, V100, V101, V111);
-			raster.drawQuad(V111, V011, V001, V000);
+			raster.drawQuad(V000, V100, V101, V001);
+			raster.drawQuad(V001, V101, V111, V011);
 		};
 
 		boxDraws[NORTH | EAST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -496,8 +492,8 @@ public class BoxOccluder {
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			raster.drawQuad(V000, V010, V110, V111);
-			raster.drawQuad(V111, V101, V100, V000);
+			raster.drawQuad(V100, V000, V010, V110);
+			raster.drawQuad(V101, V100, V110, V111);
 		};
 
 		boxDraws[NORTH | WEST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -507,8 +503,8 @@ public class BoxOccluder {
 			raster.setupVertex(V011, x0, y1, z1);
 			raster.setupVertex(V100, x1, y0, z0);
 			raster.setupVertex(V110, x1, y1, z0);
-			raster.drawQuad(V110, V100, V000, V001);
-			raster.drawQuad(V001, V011, V010, V110);
+			raster.drawQuad(V100, V000, V010, V110);
+			raster.drawQuad(V000, V001, V011, V010);
 		};
 
 		boxDraws[SOUTH | EAST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -518,8 +514,8 @@ public class BoxOccluder {
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V110, x1, y1, z0);
 			raster.setupVertex(V111, x1, y1, z1);
-			raster.drawQuad(V011, V001, V101, V100);
-			raster.drawQuad(V100, V110, V111, V011);
+			raster.drawQuad(V001, V101, V111, V011);
+			raster.drawQuad(V101, V100, V110, V111);
 		};
 
 		boxDraws[SOUTH | WEST] = (x0, y0, z0, x1, y1, z1) -> {
@@ -529,8 +525,8 @@ public class BoxOccluder {
 			raster.setupVertex(V011, x0, y1, z1);
 			raster.setupVertex(V101, x1, y0, z1);
 			raster.setupVertex(V111, x1, y1, z1);
-			raster.drawQuad(V101, V111, V011, V010);
-			raster.drawQuad(V010, V000, V001, V101);
+			raster.drawQuad(V001, V101, V111, V011);
+			raster.drawQuad(V000, V001, V011, V010);
 		};
 
 		// NB: When three faces are visible, omit nearest vertex and draw two quads instead of three.
@@ -622,6 +618,12 @@ public class BoxOccluder {
 			raster.drawQuad(V100, V101, V111, V011);
 			raster.drawQuad(V011, V010, V000, V100);
 		};
+	}
+
+	@Override
+	public final String toString() {
+		return String.format("OccluderVersion:%d  viewX:%d  viewY:%d  viewZ:%d  offsetX:%d  offsetY:%d  offsetZ:%d viewVersion:%d  regionVersion:%d  forceRedraw:%b  needsRedraw:%b  matrix:%s",
+				occluderVersion, viewX, viewY, viewZ, offsetX, offsetY, offsetZ, viewVersion, regionVersion, forceRedraw, needsRedraw, raster.mvpMatrix.toString());
 	}
 
 	public void copyFrom(BoxOccluder source) {
@@ -726,11 +728,15 @@ public class BoxOccluder {
 
 	//final MicroTimer timer = new MicroTimer("boxTests.apply", 500000);
 
+	public abstract boolean isBoxVisible(int packedBox);
+
 	/**
 	 * Does not rely on winding order but instead the distance from
 	 * plane with known facing to camera position.
+	 *
+	 * <p>Not suitable for orthographic perspective.
 	 */
-	public final boolean isBoxVisible(int packedBox) {
+	protected final boolean isBoxVisibleFromPerspective(int packedBox) {
 		final int x0 = PackedBox.x0(packedBox) - 1;
 		final int y0 = PackedBox.y0(packedBox) - 1;
 		final int z0 = PackedBox.z0(packedBox) - 1;
@@ -780,7 +786,15 @@ public class BoxOccluder {
 	 * Does not rely on winding order but instead the distance from
 	 * plane with known facing to camera position.
 	 */
-	private void occludeInner(int packedBox) {
+	protected abstract void occludeInner(int packedBox);
+
+	/**
+	 * Does not rely on winding order but instead the distance from
+	 * plane with known facing to camera position.
+	 *
+	 * <p>Will not be suitable for orthographic projection.
+	 */
+	protected void occludeFromPerspective(int packedBox) {
 		final int x0 = PackedBox.x0(packedBox);
 		final int y0 = PackedBox.y0(packedBox);
 		final int z0 = PackedBox.z0(packedBox);
@@ -875,12 +889,12 @@ public class BoxOccluder {
 	}
 
 	@FunctionalInterface
-	interface BoxTest {
+	protected interface BoxTest {
 		boolean apply(int x0, int y0, int z0, int x1, int y1, int z1);
 	}
 
 	@FunctionalInterface
-	interface BoxDraw {
+	protected interface BoxDraw {
 		void apply(int x0, int y0, int z0, int x1, int y1, int z1);
 	}
 

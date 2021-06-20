@@ -72,7 +72,7 @@ public class Constants {
 	static final int CLIP_MASK = ~(CLIP_RANGE - 1);
 	static final int TILE_COUNT = TILE_WIDTH * TILE_HEIGHT;
 	static final long[] EMPTY_BITS = new long[TILE_COUNT];
-	static final int CAMERA_PRECISION_BITS = 12;
+	public static final int CAMERA_PRECISION_BITS = 12;
 	static final int CAMERA_PRECISION_UNITY = 1 << CAMERA_PRECISION_BITS;
 	static final int CAMERA_PRECISION_CHUNK_MAX = 18 * CAMERA_PRECISION_UNITY;
 	static final int CAMERA_PRECISION_HALF = CAMERA_PRECISION_UNITY / 2;
