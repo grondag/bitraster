@@ -172,9 +172,7 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 				return BOUNDS_OUTSIDE_OR_TOO_SMALL;
 
 			default:
-				// WIP: put back
-				//assert false : "Occlusion edge case";
-				System.out.println("Occlusion edge case: " + split);
+				assert false : "Occlusion edge case";
 				// NOOP
 		}
 
