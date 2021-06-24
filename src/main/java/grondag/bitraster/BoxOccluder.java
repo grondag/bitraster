@@ -44,7 +44,7 @@ public abstract class BoxOccluder {
 	private final Matrix4L baseMvpMatrix = new Matrix4L();
 
 	protected final AbstractRasterizer raster;
-	private int occluderVersion = 1;
+	private int occlusionVersion = 1;
 	protected final BoxTest[] boxTests = new BoxTest[128];
 	protected final BoxDraw[] boxDraws = new BoxDraw[128];
 	private long viewX;
@@ -60,7 +60,6 @@ public abstract class BoxOccluder {
 	private int viewVersion = -1;
 	private int regionVersion = -1;
 	private volatile boolean forceRedraw = false;
-	private boolean needsRedraw = false;
 	private int maxSquaredChunkDistance;
 	private boolean hasNearOccluders = false;
 
@@ -622,8 +621,8 @@ public abstract class BoxOccluder {
 
 	@Override
 	public final String toString() {
-		return String.format("OccluderVersion:%d  viewX:%d  viewY:%d  viewZ:%d  offsetX:%d  offsetY:%d  offsetZ:%d viewVersion:%d  regionVersion:%d  forceRedraw:%b  needsRedraw:%b  matrix:%s",
-				occluderVersion, viewX, viewY, viewZ, offsetX, offsetY, offsetZ, viewVersion, regionVersion, forceRedraw, needsRedraw, raster.mvpMatrix.toString());
+		return String.format("OcclusionVersion:%d  viewX:%d  viewY:%d  viewZ:%d  offsetX:%d  offsetY:%d  offsetZ:%d viewVersion:%d  regionVersion:%d  forceRedraw:%b  matrix:%s",
+				occlusionVersion, viewX, viewY, viewZ, offsetX, offsetY, offsetZ, viewVersion, regionVersion, forceRedraw, raster.mvpMatrix.toString());
 	}
 
 	public void copyFrom(BoxOccluder source) {
@@ -641,19 +640,19 @@ public abstract class BoxOccluder {
 
 		viewVersion = source.viewVersion;
 		regionVersion = source.regionVersion;
-		occluderVersion = source.occluderVersion;
+		occlusionVersion = source.occlusionVersion;
 		maxSquaredChunkDistance = source.maxSquaredChunkDistance;
 
 		forceRedraw = source.forceRedraw;
-		needsRedraw = source.needsRedraw;
 	}
 
 	/**
+	 * Incremented each time the occluder is cleared and redrawn.
 	 * Previously tested regions can reuse test results if their version matches.
 	 * However, they must still be drawn (if visible) if indicated by {@link #clearSceneIfNeeded(int, int)}.
 	 */
-	public final int version() {
-		return occluderVersion;
+	public final int occlusionVersion() {
+		return occlusionVersion;
 	}
 
 	/**
@@ -703,15 +702,13 @@ public abstract class BoxOccluder {
 			this.viewVersion = viewVersion;
 			System.arraycopy(EMPTY_BITS, 0, raster.tiles, 0, TILE_COUNT);
 			forceRedraw = false;
-			needsRedraw = true;
 			hasNearOccluders = false;
 			maxSquaredChunkDistance = 0;
-			++occluderVersion;
+			++occlusionVersion;
+			return true;
 		} else {
-			needsRedraw = false;
+			return false;
 		}
-
-		return needsRedraw;
 	}
 
 	/**
@@ -720,10 +717,6 @@ public abstract class BoxOccluder {
 	*/
 	public final boolean hasNearOccluders() {
 		return hasNearOccluders;
-	}
-
-	public final boolean needsRedraw() {
-		return needsRedraw;
 	}
 
 	//final MicroTimer timer = new MicroTimer("boxTests.apply", 500000);
