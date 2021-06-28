@@ -635,7 +635,7 @@ public abstract class AbstractRasterizer {
 		drawQuad();
 	}
 
-	final boolean testQuad(int v0, int v1, int v2, int v3) {
+	final boolean isQuadPartiallyClear(int v0, int v1, int v2, int v3) {
 		final int boundsResult = prepareBounds(v0, v1, v2, v3);
 
 		if (boundsResult == BOUNDS_OUTSIDE_OR_TOO_SMALL) {
@@ -645,13 +645,13 @@ public abstract class AbstractRasterizer {
 		if ((data[IDX_MIN_PIX_X] == data[IDX_MAX_PIX_X] && data[IDX_MIN_PIX_Y] == data[IDX_MAX_PIX_Y])) {
 			final int px = data[IDX_MIN_PIX_X];
 			final int py = data[IDX_MIN_PIX_Y];
-			return px >= 0 && py >= 0 && px < PIXEL_WIDTH && py < PIXEL_HEIGHT && testPixel(px, py);
+			return px >= 0 && py >= 0 && px < PIXEL_WIDTH && py < PIXEL_HEIGHT && isPixelClear(px, py);
 		} else {
-			return testQuad();
+			return isQuadPartiallyClear();
 		}
 	}
 
-	final boolean testQuad() {
+	final boolean isQuadPartiallyClear() {
 		final int[] data = this.data;
 		final int minTileOriginX = data[IDX_MIN_TILE_ORIGIN_X];
 		final int maxTileOriginX = data[IDX_MAX_TILE_ORIGIN_X];
@@ -659,7 +659,7 @@ public abstract class AbstractRasterizer {
 		boolean goRight = true;
 
 		while (true) {
-			if (testQuadInner()) {
+			if (isQuadPartiallyClearInner()) {
 				return true;
 			}
 
@@ -689,7 +689,7 @@ public abstract class AbstractRasterizer {
 		}
 	}
 
-	final boolean testQuadInner() {
+	final boolean isQuadPartiallyClearInner() {
 		final long word = tiles[data[IDX_TILE_INDEX]];
 
 		// nothing to test if fully occluded
@@ -698,6 +698,71 @@ public abstract class AbstractRasterizer {
 		}
 
 		return (~word & computeTileCoverage()) != 0;
+	}
+
+	final boolean isQuadPartiallyOccluded(int v0, int v1, int v2, int v3) {
+		final int boundsResult = prepareBounds(v0, v1, v2, v3);
+
+		if (boundsResult == BOUNDS_OUTSIDE_OR_TOO_SMALL) {
+			return false;
+		}
+
+		if ((data[IDX_MIN_PIX_X] == data[IDX_MAX_PIX_X] && data[IDX_MIN_PIX_Y] == data[IDX_MAX_PIX_Y])) {
+			final int px = data[IDX_MIN_PIX_X];
+			final int py = data[IDX_MIN_PIX_Y];
+			return px >= 0 && py >= 0 && px < PIXEL_WIDTH && py < PIXEL_HEIGHT && isPixelSet(px, py);
+		} else {
+			return isQuadPartiallyOccluded();
+		}
+	}
+
+	final boolean isQuadPartiallyOccluded() {
+		final int[] data = this.data;
+		final int minTileOriginX = data[IDX_MIN_TILE_ORIGIN_X];
+		final int maxTileOriginX = data[IDX_MAX_TILE_ORIGIN_X];
+		final int maxTileOriginY = data[IDX_MAX_TILE_ORIGIN_Y];
+		boolean goRight = true;
+
+		while (true) {
+			if (isQuadPartiallyOccludedInner()) {
+				return true;
+			}
+
+			if (goRight) {
+				if (data[IDX_TILE_ORIGIN_X] == maxTileOriginX) {
+					if (data[IDX_TILE_ORIGIN_Y] == maxTileOriginY) {
+						return false;
+					} else {
+						moveTileUp();
+						goRight = !goRight;
+					}
+				} else {
+					moveTileRight();
+				}
+			} else {
+				if (data[IDX_TILE_ORIGIN_X] == minTileOriginX) {
+					if (data[IDX_TILE_ORIGIN_Y] == maxTileOriginY) {
+						return false;
+					} else {
+						moveTileUp();
+						goRight = !goRight;
+					}
+				} else {
+					moveTileLeft();
+				}
+			}
+		}
+	}
+
+	final boolean isQuadPartiallyOccludedInner() {
+		final long word = tiles[data[IDX_TILE_INDEX]];
+
+		// nothing to test if fully clear
+		if (word == 0) {
+			return false;
+		}
+
+		return (word & computeTileCoverage()) != 0;
 	}
 
 	final void drawQuad() {
@@ -1637,11 +1702,15 @@ public abstract class AbstractRasterizer {
 		final int px = (int) (HALF_PIXEL_WIDTH + (MATRIX_PRECISION_HALF + HALF_PIXEL_WIDTH * mvpMatrix.transformVec4X(x, y, z)) / w);
 		final int py = (int) (HALF_PIXEL_HEIGHT + (MATRIX_PRECISION_HALF + HALF_PIXEL_HEIGHT * mvpMatrix.transformVec4Y(x, y, z)) / w);
 
-		return px >= 0 && py >= 0 && px < PIXEL_WIDTH && py < PIXEL_HEIGHT && testPixel(px, py);
+		return px >= 0 && py >= 0 && px < PIXEL_WIDTH && py < PIXEL_HEIGHT && isPixelClear(px, py);
 	}
 
-	public boolean testPixel(int x, int y) {
+	public boolean isPixelClear(int x, int y) {
 		return (tiles[Indexer.lowIndexFromPixelXY(x, y)] & (1L << (Indexer.pixelIndex(x, y)))) == 0;
+	}
+
+	public boolean isPixelSet(int x, int y) {
+		return (tiles[Indexer.lowIndexFromPixelXY(x, y)] & (1L << (Indexer.pixelIndex(x, y)))) != 0;
 	}
 
 	void drawPixel(int x, int y) {
