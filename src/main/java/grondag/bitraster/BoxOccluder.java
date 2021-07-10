@@ -63,6 +63,7 @@ public abstract class BoxOccluder {
 	private volatile boolean forceRedraw = false;
 	private int maxSquaredChunkDistance;
 	private boolean hasNearOccluders = false;
+	private boolean drawNearOccluders = true;
 
 	public BoxOccluder(AbstractRasterizer raster) {
 		this.raster = raster;
@@ -934,6 +935,16 @@ public abstract class BoxOccluder {
 	}
 
 	/**
+	 * For perspective occluders, controls if near occluders are drawn.
+	 * Has no effect on testing.  Meant to reduce flickering and gaps
+	 * when the camera is moving around nearby terrain. Defaults to true
+	 * and setting persists until it is changed again.
+	 */
+	public void drawNearOccluders(boolean val) {
+		drawNearOccluders = val;
+	}
+
+	/**
 	 * Force update to new version.
 	 */
 	public final void invalidate() {
@@ -1128,7 +1139,13 @@ public abstract class BoxOccluder {
 			}
 		}
 
-		hasNearOccluders |= hasNear;
+		if (hasNear) {
+			if (drawNearOccluders) {
+				hasNearOccluders |= hasNear;
+			} else {
+				return;
+			}
+		}
 
 		boxDraws[outcome].apply(x0, y0, z0, x1, y1, z1);
 	}
