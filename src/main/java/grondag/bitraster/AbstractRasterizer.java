@@ -885,22 +885,23 @@ public abstract class AbstractRasterizer {
 		final int limit = eventLimit;
 		final int dx = ax1 - ax0;
 
-		final long nStep;
-		long x;
 
 		if (dx == 0) {
-			x = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
-			nStep = 0;
+			final int x = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
+
+			for (int y = (y0 << 1); y <= limit; y += 2) {
+				eventData[y] = x;
+			}
 		} else {
 			final int dy = ay1 - ay0;
 			final long n = (((long) dx) << 16) / dy;
-			nStep = n << PRECISION_BITS;
-			x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x100000L;
-		}
+			long nStep = n << PRECISION_BITS;
+			long x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x100000L;
 
-		for (int y = (y0 << 1); y <= limit; y += 2) {
-			eventData[y] = (int) (x >> 20);
-			x += nStep;
+			for (int y = (y0 << 1); y <= limit; y += 2) {
+				eventData[y] = (int) (x >> 20);
+				x += nStep;
+			}
 		}
 	}
 
@@ -930,24 +931,26 @@ public abstract class AbstractRasterizer {
 		final int limit = eventLimit + 1;
 		final int dx = ax1 - ax0;
 
-		final long nStep;
-		long x;
 
 		if (dx == 0) {
-			x = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
-			nStep = 0;
+			final int x = (ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+
+			// difference from left: is high index in pairs
+			for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
+				eventData[y] = x;
+			}
 		} else {
 			final int dy = ay1 - ay0;
 			final long n = (((long) dx) << 16) / dy;
-			nStep = n << PRECISION_BITS;
+			final long nStep = n << PRECISION_BITS;
 			// difference from left: rounding looses tie
-			x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x7FFFFL;
-		}
+			long x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x7FFFFL;
 
-		// difference from left: is high index in pairs
-		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
-			eventData[y] = (int) (x >> 20);
-			x += nStep;
+			// difference from left: is high index in pairs
+			for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
+				eventData[y] = (int) (x >> 20);
+				x += nStep;
+			}
 		}
 	}
 
