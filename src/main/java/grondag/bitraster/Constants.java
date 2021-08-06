@@ -217,6 +217,7 @@ public class Constants {
 	static final int EVENT_0123_RFFF = EVENT_0_RIGHT | EVENT_1_FLAT | EVENT_2_FLAT | EVENT_3_FLAT;
 	static final int EVENT_0123_LFFF = EVENT_0_LEFT | EVENT_1_FLAT | EVENT_2_FLAT | EVENT_3_FLAT;
 	static final int EVENT_0123_FFFF = EVENT_0_FLAT | EVENT_1_FLAT | EVENT_2_FLAT | EVENT_3_FLAT;
+
 	static final int PV_PX = 0;
 	static final int PV_PY = 1;
 	static final int PV_X = 2;
@@ -224,6 +225,7 @@ public class Constants {
 	static final int PV_Z = 4;
 	static final int PV_W = 5;
 	static final int PROJECTED_VERTEX_STRIDE = 6;
+
 	static final int V000 = 0;
 	static final int V001 = V000 + PROJECTED_VERTEX_STRIDE;
 	static final int V010 = V001 + PROJECTED_VERTEX_STRIDE;
@@ -232,10 +234,12 @@ public class Constants {
 	static final int V101 = V100 + PROJECTED_VERTEX_STRIDE;
 	static final int V110 = V101 + PROJECTED_VERTEX_STRIDE;
 	static final int V111 = V110 + PROJECTED_VERTEX_STRIDE;
+
 	static final int X0 = 0;
 	static final int Y0 = 1;
 	static final int X1 = 2;
 	static final int Y1 = 3;
+
 	static final int AX0 = V111 + 1;
 	static final int AY0 = AX0 + 1;
 	static final int AX1 = AY0 + 1;
@@ -252,17 +256,14 @@ public class Constants {
 	static final int DY0 = DX0 + 1;
 	static final int DX1 = DY0 + 1;
 	static final int DY1 = DX1 + 1;
+
 	static final int VERTEX_DATA_LENGTH = DY1 + 1;
+
 	static final int IDX_EVENTS = 0;
 	static final int EVENTS_LENGTH = PIXEL_HEIGHT * 2;
 	static final int IDX_VERTEX_DATA = IDX_EVENTS + EVENTS_LENGTH;
 
-	static final int IDX_POS0 = IDX_VERTEX_DATA + VERTEX_DATA_LENGTH;
-	static final int IDX_POS1 = IDX_POS0 + 1;
-	static final int IDX_POS2 = IDX_POS1 + 1;
-	static final int IDX_POS3 = IDX_POS2 + 1;
-
-	static final int IDX_AX0 = IDX_POS3 + 1;
+	static final int IDX_AX0 = IDX_VERTEX_DATA + VERTEX_DATA_LENGTH;
 	static final int IDX_AY0 = IDX_AX0 + 1;
 	static final int IDX_AX1 = IDX_AY0 + 1;
 	static final int IDX_AY1 = IDX_AX1 + 1;

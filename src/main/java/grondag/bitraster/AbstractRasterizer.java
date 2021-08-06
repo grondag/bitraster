@@ -127,10 +127,6 @@ import static grondag.bitraster.Constants.IDX_EVENTS;
 import static grondag.bitraster.Constants.IDX_MAX_TILE_ORIGIN_X;
 import static grondag.bitraster.Constants.IDX_MAX_TILE_ORIGIN_Y;
 import static grondag.bitraster.Constants.IDX_MIN_TILE_ORIGIN_X;
-import static grondag.bitraster.Constants.IDX_POS0;
-import static grondag.bitraster.Constants.IDX_POS1;
-import static grondag.bitraster.Constants.IDX_POS2;
-import static grondag.bitraster.Constants.IDX_POS3;
 import static grondag.bitraster.Constants.IDX_SAVE_TILE_INDEX;
 import static grondag.bitraster.Constants.IDX_SAVE_TILE_ORIGIN_X;
 import static grondag.bitraster.Constants.IDX_SAVE_TILE_ORIGIN_Y;
@@ -171,8 +167,11 @@ public abstract class AbstractRasterizer {
 	final long[] tiles = new long[TILE_COUNT];
 	final EventFiller[] EVENT_FILLERS = new EventFiller[0x1000];
 
-	// Bounds of current triangle - pixel coordinates
+	/** Bounds of current triangle - pixel coordinates. */
 	protected int minPixelX, minPixelY, maxPixelX, maxPixelY;
+
+	/** Classifies each edge, holding results of {@link #edgePosition(int, int, int, int)}. */
+	protected int pos0, pos1, pos2, pos3;
 
 	{
 		EVENT_FILLERS[EVENT_0123_RRRR] = () -> {
@@ -186,7 +185,7 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FRRR] = () -> {
 			populateLeftEvents();
 			populateRightEvents3(IDX_BX0, IDX_CX0, IDX_DX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLRR] = () -> {
 			populateLeftEvents(IDX_BX0);
@@ -199,23 +198,23 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FLRR] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents2(IDX_CX0, IDX_DX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFRR] = () -> {
 			populateLeftEvents();
 			populateRightEvents3(IDX_AX0, IDX_CX0, IDX_DX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFRR] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents2(IDX_CX0, IDX_DX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFRR] = () -> {
 			populateLeftEvents();
 			populateRightEvents2(IDX_CX0, IDX_DX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
 		};
 
 		EVENT_FILLERS[EVENT_0123_RRLR] = () -> {
@@ -229,7 +228,7 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FRLR] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents2(IDX_BX0, IDX_DX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLLR] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_CX0);
@@ -242,75 +241,75 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FLLR] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_CX0);
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFLR] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents2(IDX_AX0, IDX_DX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFLR] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_CX0);
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFLR] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
 		};
 
 		EVENT_FILLERS[EVENT_0123_LRFR] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents2(IDX_BX0, IDX_DX0);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RRFR] = () -> {
 			populateLeftEvents();
 			populateRightEvents3(IDX_AX0, IDX_BX0, IDX_DX0);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FRFR] = () -> {
 			populateLeftEvents();
 			populateRightEvents2(IDX_BX0, IDX_DX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLFR] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents2(IDX_AX0, IDX_DX0);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LLFR] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_BX0);
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FLFR] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFFR] = () -> {
 			populateLeftEvents();
 			populateRightEvents2(IDX_AX0, IDX_DX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFFR] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFFR] = () -> {
 			populateLeftEvents();
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 
 		EVENT_FILLERS[EVENT_0123_RRRL] = () -> {
@@ -324,7 +323,7 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FRRL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents2(IDX_BX0, IDX_CX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLRL] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_DX0);
@@ -337,23 +336,23 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FLRL] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_DX0);
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFRL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents2(IDX_AX0, IDX_CX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFRL] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_DX0);
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFRL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RRLL] = () -> {
 			populateLeftEvents2(IDX_CX0, IDX_DX0);
@@ -366,7 +365,7 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FRLL] = () -> {
 			populateLeftEvents2(IDX_CX0, IDX_DX0);
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLLL] = () -> {
 			populateLeftEvents3(IDX_BX0, IDX_CX0, IDX_DX0);
@@ -379,237 +378,237 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FLLL] = () -> {
 			populateLeftEvents3(IDX_BX0, IDX_CX0, IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFLL] = () -> {
 			populateLeftEvents2(IDX_CX0, IDX_DX0);
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFLL] = () -> {
 			populateLeftEvents3(IDX_AX0, IDX_CX0, IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFLL] = () -> {
 			populateLeftEvents2(IDX_CX0, IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LRFL] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_DX0);
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RRFL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents2(IDX_AX0, IDX_BX0);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FRFL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLFL] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_DX0);
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LLFL] = () -> {
 			populateLeftEvents3(IDX_AX0, IDX_BX0, IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FLFL] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFFL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFFL] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFFL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RRRF] = () -> {
 			populateLeftEvents();
 			populateRightEvents3(IDX_AX0, IDX_BX0, IDX_CX0);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LRRF] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents2(IDX_BX0, IDX_CX0);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FRRF] = () -> {
 			populateLeftEvents();
 			populateRightEvents2(IDX_BX0, IDX_CX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLRF] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents2(IDX_AX0, IDX_CX0);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LLRF] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_BX0);
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FLRF] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFRF] = () -> {
 			populateLeftEvents();
 			populateRightEvents2(IDX_AX0, IDX_CX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFRF] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFRF] = () -> {
 			populateLeftEvents();
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RRLF] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents2(IDX_AX0, IDX_BX0);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LRLF] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_CX0);
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FRLF] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLLF] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_CX0);
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LLLF] = () -> {
 			populateLeftEvents3(IDX_AX0, IDX_BX0, IDX_CX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FLLF] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_CX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFLF] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFLF] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_CX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFLF] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LRFF] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RRFF] = () -> {
 			populateLeftEvents();
 			populateRightEvents2(IDX_AX0, IDX_BX0);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FRFF] = () -> {
 			populateLeftEvents();
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLFF] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LLFF] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_BX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FLFF] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFFF] = () -> {
 			populateLeftEvents();
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFFF] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFFF] = () -> {
 			// fill it
 			populateLeftEvents();
 			populateRightEvents();
-			populateFlatEvents(data[IDX_POS0], data[IDX_AY0]);
-			populateFlatEvents(data[IDX_POS1], data[IDX_BY0]);
-			populateFlatEvents(data[IDX_POS2], data[IDX_CY0]);
-			populateFlatEvents(data[IDX_POS3], data[IDX_DY0]);
+			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos3, data[IDX_DY0]);
 		};
 	}
 
@@ -1723,6 +1722,9 @@ public abstract class AbstractRasterizer {
 		void apply();
 	}
 
+	/**
+	 * Classifies the input segment, returning one of the EDGE_ constants.
+	 */
 	final int edgePosition(int x0In, int y0In, int x1In, int y1In) {
 		final int dy = y1In - y0In;
 		final int dx = x1In - x0In;
@@ -1874,10 +1876,10 @@ public abstract class AbstractRasterizer {
 		data[IDX_DY0] = dy0;
 		data[IDX_DX1] = dx1;
 		data[IDX_DY1] = dy1;
-		data[IDX_POS0] = position0;
-		data[IDX_POS1] = position1;
-		data[IDX_POS2] = position2;
-		data[IDX_POS3] = position3;
+		pos0 = position0;
+		pos1 = position1;
+		pos2 = position2;
+		pos3 = position3;
 
 		final int eventKey = (position0 - 1) & EVENT_POSITION_MASK
 				| (((position1 - 1) & EVENT_POSITION_MASK) << 2)

@@ -40,10 +40,6 @@ import static grondag.bitraster.Constants.IDX_DY1;
 import static grondag.bitraster.Constants.IDX_MAX_TILE_ORIGIN_X;
 import static grondag.bitraster.Constants.IDX_MAX_TILE_ORIGIN_Y;
 import static grondag.bitraster.Constants.IDX_MIN_TILE_ORIGIN_X;
-import static grondag.bitraster.Constants.IDX_POS0;
-import static grondag.bitraster.Constants.IDX_POS1;
-import static grondag.bitraster.Constants.IDX_POS2;
-import static grondag.bitraster.Constants.IDX_POS3;
 import static grondag.bitraster.Constants.IDX_TILE_INDEX;
 import static grondag.bitraster.Constants.IDX_TILE_ORIGIN_X;
 import static grondag.bitraster.Constants.IDX_TILE_ORIGIN_Y;
@@ -66,7 +62,7 @@ import static grondag.bitraster.Indexer.tileIndex;
 
 public final class PerspectiveRasterizer extends AbstractRasterizer {
 	/** Holds results of {@link #clipNear(int, int)}. */
-	protected int clipX, clipY;
+	private int clipX, clipY;
 
 	@Override void setupVertex(final int baseIndex, final int x, final int y, final int z) {
 		final int[] data = this.data;
@@ -318,10 +314,10 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		data[IDX_DY0] = dy0;
 		data[IDX_DX1] = dx1;
 		data[IDX_DY1] = dy1;
-		data[IDX_POS0] = position0;
-		data[IDX_POS1] = position1;
-		data[IDX_POS2] = position2;
-		data[IDX_POS3] = position3;
+		pos0 = position0;
+		pos1 = position1;
+		pos2 = position2;
+		pos3 = position3;
 
 		final int eventKey = (position0 - 1) & EVENT_POSITION_MASK
 				| (((position1 - 1) & EVENT_POSITION_MASK) << 2)
@@ -488,10 +484,10 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		data[IDX_DY0] = dy0;
 		data[IDX_DX1] = dx1;
 		data[IDX_DY1] = dy1;
-		data[IDX_POS0] = position0;
-		data[IDX_POS1] = position1;
-		data[IDX_POS2] = position2;
-		data[IDX_POS3] = position3;
+		pos0 = position0;
+		pos1 = position1;
+		pos2 = position2;
+		pos3 = position3;
 
 		final int eventKey = (position0 - 1) & EVENT_POSITION_MASK
 				| (((position1 - 1) & EVENT_POSITION_MASK) << 2)
@@ -647,10 +643,10 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		data[IDX_DY0] = dy0;
 		data[IDX_DX1] = dx1;
 		data[IDX_DY1] = dy1;
-		data[IDX_POS0] = position0;
-		data[IDX_POS1] = position1;
-		data[IDX_POS2] = position2;
-		data[IDX_POS3] = position3;
+		pos0 = position0;
+		pos1 = position1;
+		pos2 = position2;
+		pos3 = position3;
 
 		final int eventKey = (position0 - 1) & EVENT_POSITION_MASK
 				| (((position1 - 1) & EVENT_POSITION_MASK) << 2)
@@ -792,10 +788,10 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		data[IDX_DY0] = dy0;
 		data[IDX_DX1] = dx1;
 		data[IDX_DY1] = dy1;
-		data[IDX_POS0] = position0;
-		data[IDX_POS1] = position1;
-		data[IDX_POS2] = position2;
-		data[IDX_POS3] = position3;
+		pos0 = position0;
+		pos1 = position1;
+		pos2 = position2;
+		pos3 = position3;
 
 		final int eventKey = (position0 - 1) & EVENT_POSITION_MASK
 				| (((position1 - 1) & EVENT_POSITION_MASK) << 2)
