@@ -37,7 +37,6 @@ import static grondag.bitraster.Constants.IDX_DX0;
 import static grondag.bitraster.Constants.IDX_DX1;
 import static grondag.bitraster.Constants.IDX_DY0;
 import static grondag.bitraster.Constants.IDX_DY1;
-import static grondag.bitraster.Constants.IDX_VERTEX_DATA;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT_CLAMP;
 import static grondag.bitraster.Constants.PRECISE_WIDTH;
@@ -59,40 +58,40 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 	private int clipX, clipY;
 
 	@Override void setupVertex(final int baseIndex, final int x, final int y, final int z) {
-		final int[] data = this.data;
+		final int[] data = vertexData;
 		final Matrix4L mvpMatrix = this.mvpMatrix;
 
 		final float tx = mvpMatrix.transformVec4X(x, y, z) * Matrix4L.FLOAT_CONVERSION;
 		final float ty = mvpMatrix.transformVec4Y(x, y, z) * Matrix4L.FLOAT_CONVERSION;
 		final float w = mvpMatrix.transformVec4W(x, y, z) * Matrix4L.FLOAT_CONVERSION;
 
-		data[baseIndex + PV_X + IDX_VERTEX_DATA] = Float.floatToRawIntBits(tx);
-		data[baseIndex + PV_Y + IDX_VERTEX_DATA] = Float.floatToRawIntBits(ty);
-		data[baseIndex + PV_Z + IDX_VERTEX_DATA] = Float.floatToRawIntBits(mvpMatrix.transformVec4Z(x, y, z) * Matrix4L.FLOAT_CONVERSION);
-		data[baseIndex + PV_W + IDX_VERTEX_DATA] = Float.floatToRawIntBits(w);
+		data[baseIndex + PV_X] = Float.floatToRawIntBits(tx);
+		data[baseIndex + PV_Y] = Float.floatToRawIntBits(ty);
+		data[baseIndex + PV_Z] = Float.floatToRawIntBits(mvpMatrix.transformVec4Z(x, y, z) * Matrix4L.FLOAT_CONVERSION);
+		data[baseIndex + PV_W] = Float.floatToRawIntBits(w);
 
 		if (w != 0) {
 			final float iw = 1f / w;
 			final int px = Math.round(tx * iw * HALF_PRECISE_WIDTH) + HALF_PRECISE_WIDTH;
 			final int py = Math.round(ty * iw * HALF_PRECISE_HEIGHT) + HALF_PRECISE_HEIGHT;
 
-			data[baseIndex + PV_PX + IDX_VERTEX_DATA] = px;
-			data[baseIndex + PV_PY + IDX_VERTEX_DATA] = py;
+			data[baseIndex + PV_PX] = px;
+			data[baseIndex + PV_PY] = py;
 		}
 	}
 
 	private void clipNear(int internal, int external) {
-		final int[] data = this.data;
+		final int[] data = vertexData;
 
-		final float intX = Float.intBitsToFloat(data[internal + PV_X + IDX_VERTEX_DATA]);
-		final float intY = Float.intBitsToFloat(data[internal + PV_Y + IDX_VERTEX_DATA]);
-		final float intZ = Float.intBitsToFloat(data[internal + PV_Z + IDX_VERTEX_DATA]);
-		final float intW = Float.intBitsToFloat(data[internal + PV_W + IDX_VERTEX_DATA]);
+		final float intX = Float.intBitsToFloat(data[internal + PV_X]);
+		final float intY = Float.intBitsToFloat(data[internal + PV_Y]);
+		final float intZ = Float.intBitsToFloat(data[internal + PV_Z]);
+		final float intW = Float.intBitsToFloat(data[internal + PV_W]);
 
-		final float extX = Float.intBitsToFloat(data[external + PV_X + IDX_VERTEX_DATA]);
-		final float extY = Float.intBitsToFloat(data[external + PV_Y + IDX_VERTEX_DATA]);
-		final float extZ = Float.intBitsToFloat(data[external + PV_Z + IDX_VERTEX_DATA]);
-		final float extW = Float.intBitsToFloat(data[external + PV_W + IDX_VERTEX_DATA]);
+		final float extX = Float.intBitsToFloat(data[external + PV_X]);
+		final float extY = Float.intBitsToFloat(data[external + PV_Y]);
+		final float extZ = Float.intBitsToFloat(data[external + PV_Z]);
+		final float extW = Float.intBitsToFloat(data[external + PV_W]);
 
 		// intersection point is the projection plane, at which point Z == 1
 		// and w will be 0 but projection division isn't needed, so force output to W = 1
@@ -167,21 +166,21 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 	}
 
 	private int prepareBounds0000(int v0, int v1, int v2, int v3) {
-		final int[] data = this.data;
+		final int[] data = vertexData;
 		int ax0, ay0, ax1, ay1;
 		int bx0, by0, bx1, by1;
 		int cx0, cy0, cx1, cy1;
 		int dx0, dy0, dx1, dy1;
 		int minY = 0, maxY = 0, minX = 0, maxX = 0;
 
-		ax0 = data[v0 + PV_PX + IDX_VERTEX_DATA];
-		ay0 = data[v0 + PV_PY + IDX_VERTEX_DATA];
-		bx0 = data[v1 + PV_PX + IDX_VERTEX_DATA];
-		by0 = data[v1 + PV_PY + IDX_VERTEX_DATA];
-		cx0 = data[v2 + PV_PX + IDX_VERTEX_DATA];
-		cy0 = data[v2 + PV_PY + IDX_VERTEX_DATA];
-		dx0 = data[v3 + PV_PX + IDX_VERTEX_DATA];
-		dy0 = data[v3 + PV_PY + IDX_VERTEX_DATA];
+		ax0 = data[v0 + PV_PX];
+		ay0 = data[v0 + PV_PY];
+		bx0 = data[v1 + PV_PX];
+		by0 = data[v1 + PV_PY];
+		cx0 = data[v2 + PV_PX];
+		cy0 = data[v2 + PV_PY];
+		dx0 = data[v3 + PV_PX];
+		dy0 = data[v3 + PV_PY];
 
 		ax1 = bx0;
 		ay1 = by0;
@@ -318,28 +317,29 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 				| (((position2 - 1) & EVENT_POSITION_MASK) << 4)
 				| (((position3 - 1) & EVENT_POSITION_MASK) << 6);
 
+		prepareEventBounds();
 		EVENT_FILLERS[eventKey].apply();
 
 		return BOUNDS_IN;
 	}
 
 	private int prepareBounds0001(int v0, int v1, int v2, int ext3) {
-		final int[] data = this.data;
+		final int[] data = vertexData;
 		int ax0, ay0, ax1, ay1;
 		int bx0, by0, bx1, by1;
 		int cx0, cy0, cx1, cy1;
 		int dx0, dy0, dx1, dy1;
 		int minY = 0, maxY = 0, minX = 0, maxX = 0;
 
-		ax0 = data[v0 + PV_PX + IDX_VERTEX_DATA];
-		ay0 = data[v0 + PV_PY + IDX_VERTEX_DATA];
-		ax1 = data[v1 + PV_PX + IDX_VERTEX_DATA];
-		ay1 = data[v1 + PV_PY + IDX_VERTEX_DATA];
+		ax0 = data[v0 + PV_PX];
+		ay0 = data[v0 + PV_PY];
+		ax1 = data[v1 + PV_PX];
+		ay1 = data[v1 + PV_PY];
 
 		bx0 = ax1;
 		by0 = ay1;
-		bx1 = data[v2 + PV_PX + IDX_VERTEX_DATA];
-		by1 = data[v2 + PV_PY + IDX_VERTEX_DATA];
+		bx1 = data[v2 + PV_PX];
+		by1 = data[v2 + PV_PY];
 
 		cx0 = bx1;
 		cy0 = by1;
@@ -488,13 +488,14 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 				| (((position2 - 1) & EVENT_POSITION_MASK) << 4)
 				| (((position3 - 1) & EVENT_POSITION_MASK) << 6);
 
+		prepareEventBounds();
 		EVENT_FILLERS[eventKey].apply();
 
 		return BOUNDS_IN;
 	}
 
 	private int prepareBounds0011(int v0, int v1, int ext2, int ext3) {
-		final int[] data = this.data;
+		final int[] data = vertexData;
 		int ax0, ay0, ax1, ay1;
 		int bx0, by0, bx1, by1;
 		int cx0, cy0, cx1, cy1;
@@ -502,10 +503,10 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 
 		int minY = 0, maxY = 0, minX = 0, maxX = 0;
 
-		ax0 = data[v0 + PV_PX + IDX_VERTEX_DATA];
-		ay0 = data[v0 + PV_PY + IDX_VERTEX_DATA];
-		ax1 = data[v1 + PV_PX + IDX_VERTEX_DATA];
-		ay1 = data[v1 + PV_PY + IDX_VERTEX_DATA];
+		ax0 = data[v0 + PV_PX];
+		ay0 = data[v0 + PV_PY];
+		ax1 = data[v1 + PV_PX];
+		ay1 = data[v1 + PV_PY];
 
 		bx0 = ax1;
 		by0 = ay1;
@@ -647,21 +648,22 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 				| (((position2 - 1) & EVENT_POSITION_MASK) << 4)
 				| (((position3 - 1) & EVENT_POSITION_MASK) << 6);
 
+		prepareEventBounds();
 		EVENT_FILLERS[eventKey].apply();
 
 		return BOUNDS_IN;
 	}
 
 	private int prepareBounds0111(int v0, int ext1, int ext2, int ext3) {
-		final int[] data = this.data;
+		final int[] data = vertexData;
 		int ax0, ay0, ax1, ay1;
 		int bx0, by0, bx1, by1;
 		int cx0, cy0, cx1, cy1;
 		int dx0, dy0, dx1, dy1;
 		int minY = 0, maxY = 0, minX = 0, maxX = 0;
 
-		ax0 = data[v0 + PV_PX + IDX_VERTEX_DATA];
-		ay0 = data[v0 + PV_PY + IDX_VERTEX_DATA];
+		ax0 = data[v0 + PV_PX];
+		ay0 = data[v0 + PV_PY];
 		clipNear(v0, ext1);
 		ax1 = clipX;
 		ay1 = clipY;
@@ -792,6 +794,7 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 				| (((position2 - 1) & EVENT_POSITION_MASK) << 4)
 				| (((position3 - 1) & EVENT_POSITION_MASK) << 6);
 
+		prepareEventBounds();
 		EVENT_FILLERS[eventKey].apply();
 
 		return BOUNDS_IN;

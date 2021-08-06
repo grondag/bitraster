@@ -18,11 +18,9 @@ package grondag.bitraster;
 
 import static grondag.bitraster.Constants.BOUNDS_IN;
 import static grondag.bitraster.Constants.BOUNDS_OUTSIDE_OR_TOO_SMALL;
-import static grondag.bitraster.Constants.DATA_LENGTH;
 import static grondag.bitraster.Constants.EDGE_BOTTOM;
 import static grondag.bitraster.Constants.EDGE_POINT;
 import static grondag.bitraster.Constants.EDGE_TOP;
-import static grondag.bitraster.Constants.EVENTS_LENGTH;
 import static grondag.bitraster.Constants.EVENT_0123_FFFF;
 import static grondag.bitraster.Constants.EVENT_0123_FFFL;
 import static grondag.bitraster.Constants.EVENT_0123_FFFR;
@@ -104,6 +102,7 @@ import static grondag.bitraster.Constants.EVENT_0123_RRLR;
 import static grondag.bitraster.Constants.EVENT_0123_RRRF;
 import static grondag.bitraster.Constants.EVENT_0123_RRRL;
 import static grondag.bitraster.Constants.EVENT_0123_RRRR;
+import static grondag.bitraster.Constants.EVENT_DATA_LENGTH;
 import static grondag.bitraster.Constants.EVENT_POSITION_MASK;
 import static grondag.bitraster.Constants.HALF_PIXEL_HEIGHT;
 import static grondag.bitraster.Constants.HALF_PIXEL_WIDTH;
@@ -123,7 +122,6 @@ import static grondag.bitraster.Constants.IDX_DX0;
 import static grondag.bitraster.Constants.IDX_DX1;
 import static grondag.bitraster.Constants.IDX_DY0;
 import static grondag.bitraster.Constants.IDX_DY1;
-import static grondag.bitraster.Constants.IDX_VERTEX_DATA;
 import static grondag.bitraster.Constants.MAX_PIXEL_Y;
 import static grondag.bitraster.Constants.PIXEL_HEIGHT;
 import static grondag.bitraster.Constants.PIXEL_WIDTH;
@@ -145,6 +143,7 @@ import static grondag.bitraster.Constants.TILE_INDEX_HIGH_Y;
 import static grondag.bitraster.Constants.TILE_INDEX_LOW_X_MASK;
 import static grondag.bitraster.Constants.TILE_INDEX_LOW_Y;
 import static grondag.bitraster.Constants.TILE_INDEX_LOW_Y_MASK;
+import static grondag.bitraster.Constants.VERTEX_DATA_LENGTH;
 import static grondag.bitraster.Indexer.tileIndex;
 import static grondag.bitraster.Matrix4L.MATRIX_PRECISION_HALF;
 
@@ -153,7 +152,8 @@ import static grondag.bitraster.Matrix4L.MATRIX_PRECISION_HALF;
 // by Fabian “ryg” Giesen. That content is in the public domain.
 public abstract class AbstractRasterizer {
 	final Matrix4L mvpMatrix = new Matrix4L();
-	final int[] data = new int[DATA_LENGTH];
+	final int[] vertexData = new int[VERTEX_DATA_LENGTH];
+	final int[] eventData = new int[EVENT_DATA_LENGTH];
 	final long[] tiles = new long[TILE_COUNT];
 	final EventFiller[] EVENT_FILLERS = new EventFiller[0x1000];
 
@@ -166,6 +166,8 @@ public abstract class AbstractRasterizer {
 	protected int minTileOriginX, maxTileOriginX, maxTileOriginY;
 	protected int tileIndex, tileOriginX, tileOriginY;
 	protected int saveTileIndex, saveTileOriginX, saveTileOriginY;
+	/** Control iteration in populateEvents_ methods. */
+	protected int eventY0, eventLimit;
 
 	{
 		EVENT_FILLERS[EVENT_0123_RRRR] = () -> {
@@ -179,7 +181,7 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FRRR] = () -> {
 			populateLeftEvents();
 			populateRightEvents3(IDX_BX0, IDX_CX0, IDX_DX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLRR] = () -> {
 			populateLeftEvents(IDX_BX0);
@@ -192,23 +194,23 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FLRR] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents2(IDX_CX0, IDX_DX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFRR] = () -> {
 			populateLeftEvents();
 			populateRightEvents3(IDX_AX0, IDX_CX0, IDX_DX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFRR] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents2(IDX_CX0, IDX_DX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFRR] = () -> {
 			populateLeftEvents();
 			populateRightEvents2(IDX_CX0, IDX_DX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
 		};
 
 		EVENT_FILLERS[EVENT_0123_RRLR] = () -> {
@@ -222,7 +224,7 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FRLR] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents2(IDX_BX0, IDX_DX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLLR] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_CX0);
@@ -235,75 +237,75 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FLLR] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_CX0);
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFLR] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents2(IDX_AX0, IDX_DX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFLR] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_CX0);
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFLR] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
 		};
 
 		EVENT_FILLERS[EVENT_0123_LRFR] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents2(IDX_BX0, IDX_DX0);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RRFR] = () -> {
 			populateLeftEvents();
 			populateRightEvents3(IDX_AX0, IDX_BX0, IDX_DX0);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FRFR] = () -> {
 			populateLeftEvents();
 			populateRightEvents2(IDX_BX0, IDX_DX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLFR] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents2(IDX_AX0, IDX_DX0);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LLFR] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_BX0);
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FLFR] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFFR] = () -> {
 			populateLeftEvents();
 			populateRightEvents2(IDX_AX0, IDX_DX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFFR] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFFR] = () -> {
 			populateLeftEvents();
 			populateRightEvents(IDX_DX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 
 		EVENT_FILLERS[EVENT_0123_RRRL] = () -> {
@@ -317,7 +319,7 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FRRL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents2(IDX_BX0, IDX_CX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLRL] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_DX0);
@@ -330,23 +332,23 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FLRL] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_DX0);
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFRL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents2(IDX_AX0, IDX_CX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFRL] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_DX0);
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFRL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RRLL] = () -> {
 			populateLeftEvents2(IDX_CX0, IDX_DX0);
@@ -359,7 +361,7 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FRLL] = () -> {
 			populateLeftEvents2(IDX_CX0, IDX_DX0);
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLLL] = () -> {
 			populateLeftEvents3(IDX_BX0, IDX_CX0, IDX_DX0);
@@ -372,243 +374,253 @@ public abstract class AbstractRasterizer {
 		EVENT_FILLERS[EVENT_0123_FLLL] = () -> {
 			populateLeftEvents3(IDX_BX0, IDX_CX0, IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(pos0, data[IDX_AY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFLL] = () -> {
 			populateLeftEvents2(IDX_CX0, IDX_DX0);
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFLL] = () -> {
 			populateLeftEvents3(IDX_AX0, IDX_CX0, IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFLL] = () -> {
 			populateLeftEvents2(IDX_CX0, IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos1, data[IDX_BY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LRFL] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_DX0);
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RRFL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents2(IDX_AX0, IDX_BX0);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FRFL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLFL] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_DX0);
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LLFL] = () -> {
 			populateLeftEvents3(IDX_AX0, IDX_BX0, IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FLFL] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFFL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFFL] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFFL] = () -> {
 			populateLeftEvents(IDX_DX0);
 			populateRightEvents();
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RRRF] = () -> {
 			populateLeftEvents();
 			populateRightEvents3(IDX_AX0, IDX_BX0, IDX_CX0);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LRRF] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents2(IDX_BX0, IDX_CX0);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FRRF] = () -> {
 			populateLeftEvents();
 			populateRightEvents2(IDX_BX0, IDX_CX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLRF] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents2(IDX_AX0, IDX_CX0);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LLRF] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_BX0);
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FLRF] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFRF] = () -> {
 			populateLeftEvents();
 			populateRightEvents2(IDX_AX0, IDX_CX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFRF] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFRF] = () -> {
 			populateLeftEvents();
 			populateRightEvents(IDX_CX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RRLF] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents2(IDX_AX0, IDX_BX0);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LRLF] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_CX0);
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FRLF] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLLF] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_CX0);
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LLLF] = () -> {
 			populateLeftEvents3(IDX_AX0, IDX_BX0, IDX_CX0);
 			populateRightEvents();
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FLLF] = () -> {
 			populateLeftEvents2(IDX_BX0, IDX_CX0);
 			populateRightEvents();
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFLF] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFLF] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_CX0);
 			populateRightEvents();
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFLF] = () -> {
 			populateLeftEvents(IDX_CX0);
 			populateRightEvents();
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LRFF] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(pos2, data[IDX_CY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RRFF] = () -> {
 			populateLeftEvents();
 			populateRightEvents2(IDX_AX0, IDX_BX0);
-			populateFlatEvents(pos2, data[IDX_CY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FRFF] = () -> {
 			populateLeftEvents();
 			populateRightEvents(IDX_BX0);
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RLFF] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(pos2, data[IDX_CY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LLFF] = () -> {
 			populateLeftEvents2(IDX_AX0, IDX_BX0);
 			populateRightEvents();
-			populateFlatEvents(pos2, data[IDX_CY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FLFF] = () -> {
 			populateLeftEvents(IDX_BX0);
 			populateRightEvents();
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_RFFF] = () -> {
 			populateLeftEvents();
 			populateRightEvents(IDX_AX0);
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_LFFF] = () -> {
 			populateLeftEvents(IDX_AX0);
 			populateRightEvents();
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
 		EVENT_FILLERS[EVENT_0123_FFFF] = () -> {
 			// fill it
 			populateLeftEvents();
 			populateRightEvents();
-			populateFlatEvents(pos0, data[IDX_AY0]);
-			populateFlatEvents(pos1, data[IDX_BY0]);
-			populateFlatEvents(pos2, data[IDX_CY0]);
-			populateFlatEvents(pos3, data[IDX_DY0]);
+			populateFlatEvents(pos0, vertexData[IDX_AY0]);
+			populateFlatEvents(pos1, vertexData[IDX_BY0]);
+			populateFlatEvents(pos2, vertexData[IDX_CY0]);
+			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
+	}
+
+	/**
+	 * Call after bounds are computed but before any of the populateEventsRight/Left
+	 * methods.  Avoids recomputing these twice.
+	 */
+	protected void prepareEventBounds() {
+		eventY0 = minPixelY & TILE_AXIS_MASK;
+		eventLimit = ((maxTileOriginY + 7) << 1);
 	}
 
 	final void copyFrom(AbstractRasterizer source) {
 		mvpMatrix.copyFrom(source.mvpMatrix);
-		System.arraycopy(source.data, 0, data, 0, DATA_LENGTH);
+		System.arraycopy(source.vertexData, 0, vertexData, 0, VERTEX_DATA_LENGTH);
+		System.arraycopy(source.eventData, 0, eventData, 0, EVENT_DATA_LENGTH);
 		System.arraycopy(source.tiles, 0, tiles, 0, TILE_COUNT);
 	}
 
@@ -811,7 +823,7 @@ public abstract class AbstractRasterizer {
 	abstract int prepareBounds(int v0, int v1, int v2, int v3);
 
 	private void populateFlatEvents(int position, int y0In) {
-		final int[] data = this.data;
+		final int[] eventData = this.eventData;
 
 		if (position == EDGE_TOP) {
 			final int py = ((y0In + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) + 1;
@@ -822,11 +834,11 @@ public abstract class AbstractRasterizer {
 			final int start = py < 0 ? 0 : (py << 1);
 			final int limit = y1 << 1;
 
-			assert limit < EVENTS_LENGTH;
+			assert limit < EVENT_DATA_LENGTH;
 
 			for (int y = start; y <= limit; ) {
-				data[y++] = PIXEL_WIDTH;
-				data[y++] = -1;
+				eventData[y++] = PIXEL_WIDTH;
+				eventData[y++] = -1;
 			}
 		} else if (position == EDGE_BOTTOM) {
 			final int py = (y0In >> PRECISION_BITS);
@@ -837,11 +849,11 @@ public abstract class AbstractRasterizer {
 			final int start = y0 << 1;
 			final int limit = py > MAX_PIXEL_Y ? (MAX_PIXEL_Y << 1) : (py << 1);
 
-			assert limit < EVENTS_LENGTH;
+			assert limit < EVENT_DATA_LENGTH;
 
 			for (int y = start; y < limit; ) {
-				data[y++] = PIXEL_WIDTH;
-				data[y++] = -1;
+				eventData[y++] = PIXEL_WIDTH;
+				eventData[y++] = -1;
 			}
 		} else {
 			assert position == EDGE_POINT;
@@ -852,26 +864,25 @@ public abstract class AbstractRasterizer {
 	 * Puts left edge at screen boundary.
 	 */
 	private void populateLeftEvents() {
-		final int[] data = this.data;
-		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = maxTileOriginY + 7;
-		final int limit = y1 << 1;
+		final int[] eventData = this.eventData;
+		final int y0 = eventY0;
+		final int limit = eventLimit;
 
 		for (int y = y0 << 1; y <= limit; y += 2) {
-			data[y] = 0;
+			eventData[y] = 0;
 		}
 	}
 
 	private void populateLeftEvents(int a) {
-		final int[] data = this.data;
-		final int ax0 = data[a];
-		final int ay0 = data[a + 1];
-		final int ax1 = data[a + 2];
-		final int ay1 = data[a + 3];
+		final int[] vertexData = this.vertexData;
+		final int ax0 = vertexData[a];
+		final int ay0 = vertexData[a + 1];
+		final int ax1 = vertexData[a + 2];
+		final int ay1 = vertexData[a + 3];
 
-		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = maxTileOriginY + 7;
-		final int limit = (y1 << 1);
+		final int[] eventData = this.eventData;
+		final int y0 = eventY0;
+		final int limit = eventLimit;
 		final int dx = ax1 - ax0;
 
 		final long nStep;
@@ -888,36 +899,35 @@ public abstract class AbstractRasterizer {
 		}
 
 		for (int y = (y0 << 1); y <= limit; y += 2) {
-			data[y] = (int) (x > 0 ? (x >> 20) : 0);
+			eventData[y] = (int) (x > 0 ? (x >> 20) : 0);
 			x += nStep;
 		}
 	}
 
 	private void populateRightEvents() {
-		final int[] data = this.data;
-		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = maxTileOriginY + 7;
+		final int[] eventData = this.eventData;
+		final int y0 = eventY0;
 		// difference from left: is high index in pairs
-		final int limit = (y1 << 1) + 1;
+		final int limit = eventLimit + 1;
 
 		// difference from left: is high index in pairs
 		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
-			data[y] = PIXEL_WIDTH;
+			eventData[y] = PIXEL_WIDTH;
 		}
 	}
 
 	private void populateRightEvents(int a) {
-		final int[] data = this.data;
+		final int[] vertexData = this.vertexData;
 
-		final int ax0 = data[a];
-		final int ay0 = data[a + 1];
-		final int ax1 = data[a + 2];
-		final int ay1 = data[a + 3];
+		final int ax0 = vertexData[a];
+		final int ay0 = vertexData[a + 1];
+		final int ax1 = vertexData[a + 2];
+		final int ay1 = vertexData[a + 3];
 
-		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = maxTileOriginY + 7;
+		final int[] eventData = this.eventData;
+		final int y0 = eventY0;
 		// difference from left: is high index in pairs
-		final int limit = (y1 << 1) + 1;
+		final int limit = eventLimit + 1;
 		final int dx = ax1 - ax0;
 
 		final long nStep;
@@ -936,26 +946,27 @@ public abstract class AbstractRasterizer {
 
 		// difference from left: is high index in pairs
 		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
-			data[y] = (int) (x >= 0 ? (x >> 20) : -1);
+			eventData[y] = (int) (x >= 0 ? (x >> 20) : -1);
 			x += nStep;
 		}
 	}
 
 	private void populateLeftEvents2(int a, int b) {
-		final int[] data = this.data;
-		final int ax0 = data[a];
-		final int ay0 = data[a + 1];
-		final int ax1 = data[a + 2];
-		final int ay1 = data[a + 3];
+		final int[] vertexData = this.vertexData;
 
-		final int bx0 = data[b];
-		final int by0 = data[b + 1];
-		final int bx1 = data[b + 2];
-		final int by1 = data[b + 3];
+		final int ax0 = vertexData[a];
+		final int ay0 = vertexData[a + 1];
+		final int ax1 = vertexData[a + 2];
+		final int ay1 = vertexData[a + 3];
 
-		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = maxTileOriginY + 7;
-		final int limit = (y1 << 1);
+		final int bx0 = vertexData[b];
+		final int by0 = vertexData[b + 1];
+		final int bx1 = vertexData[b + 2];
+		final int by1 = vertexData[b + 3];
+
+		final int[] eventData = this.eventData;
+		final int y0 = eventY0;
+		final int limit = eventLimit;
 
 		final long aStep;
 		long ax;
@@ -987,7 +998,7 @@ public abstract class AbstractRasterizer {
 		for (int y = (y0 << 1); y <= limit; y += 2) {
 			final long x = ax > bx ? ax : bx;
 
-			data[y] = (int) (x > 0 ? (x >> 20) : 0);
+			eventData[y] = (int) (x > 0 ? (x >> 20) : 0);
 
 			ax += aStep;
 			bx += bStep;
@@ -995,26 +1006,26 @@ public abstract class AbstractRasterizer {
 	}
 
 	private void populateLeftEvents3(int a, int b, int c) {
-		final int[] data = this.data;
+		final int[] vertexData = this.vertexData;
 
-		final int ax0 = data[a];
-		final int ay0 = data[a + 1];
-		final int ax1 = data[a + 2];
-		final int ay1 = data[a + 3];
+		final int ax0 = vertexData[a];
+		final int ay0 = vertexData[a + 1];
+		final int ax1 = vertexData[a + 2];
+		final int ay1 = vertexData[a + 3];
 
-		final int bx0 = data[b];
-		final int by0 = data[b + 1];
-		final int bx1 = data[b + 2];
-		final int by1 = data[b + 3];
+		final int bx0 = vertexData[b];
+		final int by0 = vertexData[b + 1];
+		final int bx1 = vertexData[b + 2];
+		final int by1 = vertexData[b + 3];
 
-		final int cx0 = data[c];
-		final int cy0 = data[c + 1];
-		final int cx1 = data[c + 2];
-		final int cy1 = data[c + 3];
+		final int cx0 = vertexData[c];
+		final int cy0 = vertexData[c + 1];
+		final int cx1 = vertexData[c + 2];
+		final int cy1 = vertexData[c + 3];
 
-		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = maxTileOriginY + 7;
-		final int limit = (y1 << 1);
+		final int[] eventData = this.eventData;
+		final int y0 = eventY0;
+		final int limit = eventLimit;
 
 		final long aStep;
 		long ax;
@@ -1060,7 +1071,7 @@ public abstract class AbstractRasterizer {
 			long x = ax > bx ? ax : bx;
 			if (cx > x) x = cx;
 
-			data[y] = (int) (x > 0 ? (x >> 20) : 0);
+			eventData[y] = (int) (x > 0 ? (x >> 20) : 0);
 
 			ax += aStep;
 			bx += bStep;
@@ -1069,31 +1080,31 @@ public abstract class AbstractRasterizer {
 	}
 
 	private void populateLeftEvents4(int a, int b, int c, int d) {
-		final int[] data = this.data;
+		final int[] vertexData = this.vertexData;
 
-		final int ax0 = data[a];
-		final int ay0 = data[a + 1];
-		final int ax1 = data[a + 2];
-		final int ay1 = data[a + 3];
+		final int ax0 = vertexData[a];
+		final int ay0 = vertexData[a + 1];
+		final int ax1 = vertexData[a + 2];
+		final int ay1 = vertexData[a + 3];
 
-		final int bx0 = data[b];
-		final int by0 = data[b + 1];
-		final int bx1 = data[b + 2];
-		final int by1 = data[b + 3];
+		final int bx0 = vertexData[b];
+		final int by0 = vertexData[b + 1];
+		final int bx1 = vertexData[b + 2];
+		final int by1 = vertexData[b + 3];
 
-		final int cx0 = data[c];
-		final int cy0 = data[c + 1];
-		final int cx1 = data[c + 2];
-		final int cy1 = data[c + 3];
+		final int cx0 = vertexData[c];
+		final int cy0 = vertexData[c + 1];
+		final int cx1 = vertexData[c + 2];
+		final int cy1 = vertexData[c + 3];
 
-		final int dx0 = data[d];
-		final int dy0 = data[d + 1];
-		final int dx1 = data[d + 2];
-		final int dy1 = data[d + 3];
+		final int dx0 = vertexData[d];
+		final int dy0 = vertexData[d + 1];
+		final int dx1 = vertexData[d + 2];
+		final int dy1 = vertexData[d + 3];
 
-		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = maxTileOriginY + 7;
-		final int limit = (y1 << 1);
+		final int[] eventData = this.eventData;
+		final int y0 = eventY0;
+		final int limit = eventLimit;
 
 		final long aStep;
 		long ax;
@@ -1153,7 +1164,7 @@ public abstract class AbstractRasterizer {
 			if (cx > x) x = cx;
 			if (dx > x) x = dx;
 
-			data[y] = (int) (x > 0 ? (x >> 20) : 0);
+			eventData[y] = (int) (x > 0 ? (x >> 20) : 0);
 
 			ax += aStep;
 			bx += bStep;
@@ -1163,22 +1174,22 @@ public abstract class AbstractRasterizer {
 	}
 
 	private void populateRightEvents2(int a, int b) {
-		final int[] data = this.data;
+		final int[] vertexData = this.vertexData;
 
-		final int ax0 = data[a];
-		final int ay0 = data[a + 1];
-		final int ax1 = data[a + 2];
-		final int ay1 = data[a + 3];
+		final int ax0 = vertexData[a];
+		final int ay0 = vertexData[a + 1];
+		final int ax1 = vertexData[a + 2];
+		final int ay1 = vertexData[a + 3];
 
-		final int bx0 = data[b];
-		final int by0 = data[b + 1];
-		final int bx1 = data[b + 2];
-		final int by1 = data[b + 3];
+		final int bx0 = vertexData[b];
+		final int by0 = vertexData[b + 1];
+		final int bx1 = vertexData[b + 2];
+		final int by1 = vertexData[b + 3];
 
-		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = maxTileOriginY + 7;
+		final int[] eventData = this.eventData;
+		final int y0 = eventY0;
 		// difference from left: is high index in pairs
-		final int limit = (y1 << 1) + 1;
+		final int limit = eventLimit + 1;
 
 		final long aStep;
 		long ax;
@@ -1214,7 +1225,7 @@ public abstract class AbstractRasterizer {
 			// difference from left: lower value wins
 			final long x = ax < bx ? ax : bx;
 
-			data[y] = (int) (x >= 0 ? (x >> 20) : -1);
+			eventData[y] = (int) (x >= 0 ? (x >> 20) : -1);
 
 			ax += aStep;
 			bx += bStep;
@@ -1222,27 +1233,27 @@ public abstract class AbstractRasterizer {
 	}
 
 	private void populateRightEvents3(int a, int b, int c) {
-		final int[] data = this.data;
+		final int[] vertexData = this.vertexData;
 
-		final int ax0 = data[a];
-		final int ay0 = data[a + 1];
-		final int ax1 = data[a + 2];
-		final int ay1 = data[a + 3];
+		final int ax0 = vertexData[a];
+		final int ay0 = vertexData[a + 1];
+		final int ax1 = vertexData[a + 2];
+		final int ay1 = vertexData[a + 3];
 
-		final int bx0 = data[b];
-		final int by0 = data[b + 1];
-		final int bx1 = data[b + 2];
-		final int by1 = data[b + 3];
+		final int bx0 = vertexData[b];
+		final int by0 = vertexData[b + 1];
+		final int bx1 = vertexData[b + 2];
+		final int by1 = vertexData[b + 3];
 
-		final int cx0 = data[c];
-		final int cy0 = data[c + 1];
-		final int cx1 = data[c + 2];
-		final int cy1 = data[c + 3];
+		final int cx0 = vertexData[c];
+		final int cy0 = vertexData[c + 1];
+		final int cx1 = vertexData[c + 2];
+		final int cy1 = vertexData[c + 3];
 
-		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = maxTileOriginY + 7;
+		final int[] eventData = this.eventData;
+		final int y0 = eventY0;
 		// difference from left: is high index in pairs
-		final int limit = (y1 << 1) + 1;
+		final int limit = eventLimit + 1;
 
 		final long aStep;
 		long ax;
@@ -1294,7 +1305,7 @@ public abstract class AbstractRasterizer {
 
 			if (cx < x) x = cx;
 
-			data[y] = (int) (x >= 0 ? (x >> 20) : -1);
+			eventData[y] = (int) (x >= 0 ? (x >> 20) : -1);
 
 			ax += aStep;
 			bx += bStep;
@@ -1303,32 +1314,32 @@ public abstract class AbstractRasterizer {
 	}
 
 	private void populateRightEvents4(int a, int b, int c, int d) {
-		final int[] data = this.data;
+		final int[] vertexData = this.vertexData;
 
-		final int ax0 = data[a];
-		final int ay0 = data[a + 1];
-		final int ax1 = data[a + 2];
-		final int ay1 = data[a + 3];
+		final int ax0 = vertexData[a];
+		final int ay0 = vertexData[a + 1];
+		final int ax1 = vertexData[a + 2];
+		final int ay1 = vertexData[a + 3];
 
-		final int bx0 = data[b];
-		final int by0 = data[b + 1];
-		final int bx1 = data[b + 2];
-		final int by1 = data[b + 3];
+		final int bx0 = vertexData[b];
+		final int by0 = vertexData[b + 1];
+		final int bx1 = vertexData[b + 2];
+		final int by1 = vertexData[b + 3];
 
-		final int cx0 = data[c];
-		final int cy0 = data[c + 1];
-		final int cx1 = data[c + 2];
-		final int cy1 = data[c + 3];
+		final int cx0 = vertexData[c];
+		final int cy0 = vertexData[c + 1];
+		final int cx1 = vertexData[c + 2];
+		final int cy1 = vertexData[c + 3];
 
-		final int dx0 = data[d];
-		final int dy0 = data[d + 1];
-		final int dx1 = data[d + 2];
-		final int dy1 = data[d + 3];
+		final int dx0 = vertexData[d];
+		final int dy0 = vertexData[d + 1];
+		final int dx1 = vertexData[d + 2];
+		final int dy1 = vertexData[d + 3];
 
-		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = maxTileOriginY + 7;
+		final int[] eventData = this.eventData;
+		final int y0 = eventY0;
 		// difference from left: is high index in pairs
-		final int limit = (y1 << 1) + 1;
+		final int limit = eventLimit + 1;
 
 		final long aStep;
 		long ax;
@@ -1395,7 +1406,7 @@ public abstract class AbstractRasterizer {
 			if (cx < x) x = cx;
 			if (dx < x) x = dx;
 
-			data[y] = (int) (x >= 0 ? (x >> 20) : -1);
+			eventData[y] = (int) (x >= 0 ? (x >> 20) : -1);
 
 			ax += aStep;
 			bx += bStep;
@@ -1407,9 +1418,9 @@ public abstract class AbstractRasterizer {
 	abstract void setupVertex(final int baseIndex, final int x, final int y, final int z);
 
 	int needsNearClip(final int baseIndex) {
-		final int[] data = this.data;
-		final float w = Float.intBitsToFloat(data[baseIndex + PV_W + IDX_VERTEX_DATA]);
-		final float z = Float.intBitsToFloat(data[baseIndex + PV_Z + IDX_VERTEX_DATA]);
+		final int[] data = vertexData;
+		final float w = Float.intBitsToFloat(data[baseIndex + PV_W]);
+		final float z = Float.intBitsToFloat(data[baseIndex + PV_Z]);
 
 		if (w == 0) {
 			return 1;
@@ -1474,7 +1485,7 @@ public abstract class AbstractRasterizer {
 	}
 
 	long computeTileCoverage() {
-		final int[] data = this.data;
+		final int[] data = eventData;
 
 		int y = tileOriginY << 1;
 		final int tx = tileOriginX;
@@ -1644,21 +1655,21 @@ public abstract class AbstractRasterizer {
 	}
 
 	final int prepareBoundsNoClip(int v0, int v1, int v2, int v3) {
-		final int[] data = this.data;
+		final int[] data = vertexData;
 		int ax0, ay0, ax1, ay1;
 		int bx0, by0, bx1, by1;
 		int cx0, cy0, cx1, cy1;
 		int dx0, dy0, dx1, dy1;
 		int minY = 0, maxY = 0, minX = 0, maxX = 0;
 
-		ax0 = data[v0 + PV_PX + IDX_VERTEX_DATA];
-		ay0 = data[v0 + PV_PY + IDX_VERTEX_DATA];
-		bx0 = data[v1 + PV_PX + IDX_VERTEX_DATA];
-		by0 = data[v1 + PV_PY + IDX_VERTEX_DATA];
-		cx0 = data[v2 + PV_PX + IDX_VERTEX_DATA];
-		cy0 = data[v2 + PV_PY + IDX_VERTEX_DATA];
-		dx0 = data[v3 + PV_PX + IDX_VERTEX_DATA];
-		dy0 = data[v3 + PV_PY + IDX_VERTEX_DATA];
+		ax0 = data[v0 + PV_PX];
+		ay0 = data[v0 + PV_PY];
+		bx0 = data[v1 + PV_PX];
+		by0 = data[v1 + PV_PY];
+		cx0 = data[v2 + PV_PX];
+		cy0 = data[v2 + PV_PY];
+		dx0 = data[v3 + PV_PX];
+		dy0 = data[v3 + PV_PY];
 
 		ax1 = bx0;
 		ay1 = by0;
@@ -1795,6 +1806,7 @@ public abstract class AbstractRasterizer {
 				| (((position2 - 1) & EVENT_POSITION_MASK) << 4)
 				| (((position3 - 1) & EVENT_POSITION_MASK) << 6);
 
+		prepareEventBounds();
 		EVENT_FILLERS[eventKey].apply();
 
 		return BOUNDS_IN;
