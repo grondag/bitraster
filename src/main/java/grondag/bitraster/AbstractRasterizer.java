@@ -899,7 +899,7 @@ public abstract class AbstractRasterizer {
 		}
 
 		for (int y = (y0 << 1); y <= limit; y += 2) {
-			eventData[y] = (int) (x > 0 ? (x >> 20) : 0);
+			eventData[y] = (int) (x >> 20);
 			x += nStep;
 		}
 	}
@@ -946,7 +946,7 @@ public abstract class AbstractRasterizer {
 
 		// difference from left: is high index in pairs
 		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
-			eventData[y] = (int) (x >= 0 ? (x >> 20) : -1);
+			eventData[y] = (int) (x >> 20);
 			x += nStep;
 		}
 	}
@@ -998,7 +998,7 @@ public abstract class AbstractRasterizer {
 		for (int y = (y0 << 1); y <= limit; y += 2) {
 			final long x = ax > bx ? ax : bx;
 
-			eventData[y] = (int) (x > 0 ? (x >> 20) : 0);
+			eventData[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1071,7 +1071,7 @@ public abstract class AbstractRasterizer {
 			long x = ax > bx ? ax : bx;
 			if (cx > x) x = cx;
 
-			eventData[y] = (int) (x > 0 ? (x >> 20) : 0);
+			eventData[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1164,7 +1164,7 @@ public abstract class AbstractRasterizer {
 			if (cx > x) x = cx;
 			if (dx > x) x = dx;
 
-			eventData[y] = (int) (x > 0 ? (x >> 20) : 0);
+			eventData[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1225,7 +1225,7 @@ public abstract class AbstractRasterizer {
 			// difference from left: lower value wins
 			final long x = ax < bx ? ax : bx;
 
-			eventData[y] = (int) (x >= 0 ? (x >> 20) : -1);
+			eventData[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1305,7 +1305,7 @@ public abstract class AbstractRasterizer {
 
 			if (cx < x) x = cx;
 
-			eventData[y] = (int) (x >= 0 ? (x >> 20) : -1);
+			eventData[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1406,7 +1406,7 @@ public abstract class AbstractRasterizer {
 			if (cx < x) x = cx;
 			if (dx < x) x = dx;
 
-			eventData[y] = (int) (x >= 0 ? (x >> 20) : -1);
+			eventData[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
