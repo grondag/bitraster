@@ -123,7 +123,6 @@ import static grondag.bitraster.Constants.IDX_DX0;
 import static grondag.bitraster.Constants.IDX_DX1;
 import static grondag.bitraster.Constants.IDX_DY0;
 import static grondag.bitraster.Constants.IDX_DY1;
-import static grondag.bitraster.Constants.IDX_EVENTS;
 import static grondag.bitraster.Constants.IDX_VERTEX_DATA;
 import static grondag.bitraster.Constants.MAX_PIXEL_Y;
 import static grondag.bitraster.Constants.PIXEL_HEIGHT;
@@ -820,10 +819,10 @@ public abstract class AbstractRasterizer {
 			if (py == MAX_PIXEL_Y) return;
 
 			final int y1 = maxTileOriginY + 7;
-			final int start = IDX_EVENTS + (py < 0 ? 0 : (py << 1));
-			final int limit = IDX_EVENTS + (y1 << 1);
+			final int start = py < 0 ? 0 : (py << 1);
+			final int limit = y1 << 1;
 
-			assert limit < EVENTS_LENGTH + IDX_EVENTS;
+			assert limit < EVENTS_LENGTH;
 
 			for (int y = start; y <= limit; ) {
 				data[y++] = PIXEL_WIDTH;
@@ -835,10 +834,10 @@ public abstract class AbstractRasterizer {
 			if (py == 0) return;
 
 			final int y0 = minPixelY & TILE_AXIS_MASK;
-			final int start = IDX_EVENTS + (y0 << 1);
-			final int limit = IDX_EVENTS + (py > MAX_PIXEL_Y ? (MAX_PIXEL_Y << 1) : (py << 1));
+			final int start = y0 << 1;
+			final int limit = py > MAX_PIXEL_Y ? (MAX_PIXEL_Y << 1) : (py << 1);
 
-			assert limit < EVENTS_LENGTH + IDX_EVENTS;
+			assert limit < EVENTS_LENGTH;
 
 			for (int y = start; y < limit; ) {
 				data[y++] = PIXEL_WIDTH;
@@ -856,9 +855,9 @@ public abstract class AbstractRasterizer {
 		final int[] data = this.data;
 		final int y0 = minPixelY & TILE_AXIS_MASK;
 		final int y1 = maxTileOriginY + 7;
-		final int limit = IDX_EVENTS + (y1 << 1);
+		final int limit = y1 << 1;
 
-		for (int y = IDX_EVENTS + (y0 << 1); y <= limit; y += 2) {
+		for (int y = y0 << 1; y <= limit; y += 2) {
 			data[y] = 0;
 		}
 	}
@@ -889,7 +888,7 @@ public abstract class AbstractRasterizer {
 		}
 
 		for (int y = (y0 << 1); y <= limit; y += 2) {
-			data[IDX_EVENTS + y] = (int) (x > 0 ? (x >> 20) : 0);
+			data[y] = (int) (x > 0 ? (x >> 20) : 0);
 			x += nStep;
 		}
 	}
@@ -903,7 +902,7 @@ public abstract class AbstractRasterizer {
 
 		// difference from left: is high index in pairs
 		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
-			data[IDX_EVENTS + y] = PIXEL_WIDTH;
+			data[y] = PIXEL_WIDTH;
 		}
 	}
 
@@ -937,7 +936,7 @@ public abstract class AbstractRasterizer {
 
 		// difference from left: is high index in pairs
 		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
-			data[IDX_EVENTS + y] = (int) (x >= 0 ? (x >> 20) : -1);
+			data[y] = (int) (x >= 0 ? (x >> 20) : -1);
 			x += nStep;
 		}
 	}
@@ -988,7 +987,7 @@ public abstract class AbstractRasterizer {
 		for (int y = (y0 << 1); y <= limit; y += 2) {
 			final long x = ax > bx ? ax : bx;
 
-			data[IDX_EVENTS + y] = (int) (x > 0 ? (x >> 20) : 0);
+			data[y] = (int) (x > 0 ? (x >> 20) : 0);
 
 			ax += aStep;
 			bx += bStep;
@@ -1061,7 +1060,7 @@ public abstract class AbstractRasterizer {
 			long x = ax > bx ? ax : bx;
 			if (cx > x) x = cx;
 
-			data[IDX_EVENTS + y] = (int) (x > 0 ? (x >> 20) : 0);
+			data[y] = (int) (x > 0 ? (x >> 20) : 0);
 
 			ax += aStep;
 			bx += bStep;
@@ -1154,7 +1153,7 @@ public abstract class AbstractRasterizer {
 			if (cx > x) x = cx;
 			if (dx > x) x = dx;
 
-			data[IDX_EVENTS + y] = (int) (x > 0 ? (x >> 20) : 0);
+			data[y] = (int) (x > 0 ? (x >> 20) : 0);
 
 			ax += aStep;
 			bx += bStep;
@@ -1215,7 +1214,7 @@ public abstract class AbstractRasterizer {
 			// difference from left: lower value wins
 			final long x = ax < bx ? ax : bx;
 
-			data[IDX_EVENTS + y] = (int) (x >= 0 ? (x >> 20) : -1);
+			data[y] = (int) (x >= 0 ? (x >> 20) : -1);
 
 			ax += aStep;
 			bx += bStep;
@@ -1295,7 +1294,7 @@ public abstract class AbstractRasterizer {
 
 			if (cx < x) x = cx;
 
-			data[IDX_EVENTS + y] = (int) (x >= 0 ? (x >> 20) : -1);
+			data[y] = (int) (x >= 0 ? (x >> 20) : -1);
 
 			ax += aStep;
 			bx += bStep;
@@ -1396,7 +1395,7 @@ public abstract class AbstractRasterizer {
 			if (cx < x) x = cx;
 			if (dx < x) x = dx;
 
-			data[IDX_EVENTS + y] = (int) (x >= 0 ? (x >> 20) : -1);
+			data[y] = (int) (x >= 0 ? (x >> 20) : -1);
 
 			ax += aStep;
 			bx += bStep;
@@ -1404,88 +1403,6 @@ public abstract class AbstractRasterizer {
 			dx += dStep;
 		}
 	}
-
-	// For abandoned traversal scheme
-	//	void populateTileEvents() {
-	//		final int[] events = this.events;
-	//		final int[] tileEvents = this.tileEvents;
-	//
-	//		int y = (minPixelY & TILE_AXIS_MASK) << 1;
-	//		final int ty0 = (y >> TILE_AXIS_SHIFT); //  NB: no left shift here because y already includes
-	//		final int ty1 = (maxTileOriginY >> TILE_AXIS_SHIFT) << 1;
-	//
-	//		for (int ty = ty0; ty <= ty1;) {
-	//			int l = Integer.MAX_VALUE;
-	//			int r = Integer.MIN_VALUE;
-	//
-	//			int tl = (events[y++] >> TILE_AXIS_SHIFT);
-	//			int tr = (events[y++] >> TILE_AXIS_SHIFT);
-	//			if (tr >= tl) {
-	//				if (tl < l) l = tl;
-	//				if (tr > r) r = tr;
-	//			}
-	//
-	//			tl = (events[y++] >> TILE_AXIS_SHIFT);
-	//			tr = (events[y++] >> TILE_AXIS_SHIFT);
-	//			if (tr >= tl) {
-	//				if (tl < l) l = tl;
-	//				if (tr > r) r = tr;
-	//			}
-	//
-	//			tl = (events[y++] >> TILE_AXIS_SHIFT);
-	//			tr = (events[y++] >> TILE_AXIS_SHIFT);
-	//			if (tr >= tl) {
-	//				if (tl < l) l = tl;
-	//				if (tr > r) r = tr;
-	//			}
-	//
-	//			tl = (events[y++] >> TILE_AXIS_SHIFT);
-	//			tr = (events[y++] >> TILE_AXIS_SHIFT);
-	//			if (tr >= tl) {
-	//				if (tl < l) l = tl;
-	//				if (tr > r) r = tr;
-	//			}
-	//
-	//			tl = (events[y++] >> TILE_AXIS_SHIFT);
-	//			tr = (events[y++] >> TILE_AXIS_SHIFT);
-	//			if (tr >= tl) {
-	//				if (tl < l) l = tl;
-	//				if (tr > r) r = tr;
-	//			}
-	//
-	//			tl = (events[y++] >> TILE_AXIS_SHIFT);
-	//			tr = (events[y++] >> TILE_AXIS_SHIFT);
-	//			if (tr >= tl) {
-	//				if (tl < l) l = tl;
-	//				if (tr > r) r = tr;
-	//			}
-	//
-	//			tl = (events[y++] >> TILE_AXIS_SHIFT);
-	//			tr = (events[y++] >> TILE_AXIS_SHIFT);
-	//			if (tr >= tl) {
-	//				if (tl < l) l = tl;
-	//				if (tr > r) r = tr;
-	//			}
-	//
-	//			tl = (events[y++] >> TILE_AXIS_SHIFT);
-	//			tr = (events[y++] >> TILE_AXIS_SHIFT);
-	//			if (tr >= tl) {
-	//				if (tl < l) l = tl;
-	//				if (tr > r) r = tr;
-	//			}
-	//
-	//			if (l < 0) l = 0;
-	//
-	//			if (r > MAX_TILE_X) r = MAX_TILE_X;
-	//
-	//			//assert l <= r;
-	//			//			assert l <= MAX_TILE_X;
-	//			//			assert r >= 0;
-	//
-	//			tileEvents[ty++] = l;
-	//			tileEvents[ty++] = r;
-	//		}
-	//	}
 
 	abstract void setupVertex(final int baseIndex, final int x, final int y, final int z);
 
@@ -1566,8 +1483,8 @@ public abstract class AbstractRasterizer {
 
 		long mask = 0;
 
-		int leftX = data[y + IDX_EVENTS] - tx;
-		int rightX = baseX - data[++y + IDX_EVENTS];
+		int leftX = data[y] - tx;
+		int rightX = baseX - data[++y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1579,8 +1496,8 @@ public abstract class AbstractRasterizer {
 			mask = m;
 		}
 
-		leftX = data[++y + IDX_EVENTS] - tx;
-		rightX = baseX - data[++y + IDX_EVENTS];
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1592,8 +1509,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 8;
 		}
 
-		leftX = data[++y + IDX_EVENTS] - tx;
-		rightX = baseX - data[++y + IDX_EVENTS];
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1605,8 +1522,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 16;
 		}
 
-		leftX = data[++y + IDX_EVENTS] - tx;
-		rightX = baseX - data[++y + IDX_EVENTS];
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1618,8 +1535,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 24;
 		}
 
-		leftX = data[++y + IDX_EVENTS] - tx;
-		rightX = baseX - data[++y + IDX_EVENTS];
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1631,8 +1548,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 32;
 		}
 
-		leftX = data[++y + IDX_EVENTS] - tx;
-		rightX = baseX - data[++y + IDX_EVENTS];
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1644,8 +1561,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 40;
 		}
 
-		leftX = data[++y + IDX_EVENTS] - tx;
-		rightX = baseX - data[++y + IDX_EVENTS];
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1657,8 +1574,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 48;
 		}
 
-		leftX = data[++y + IDX_EVENTS] - tx;
-		rightX = baseX - data[++y + IDX_EVENTS];
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
