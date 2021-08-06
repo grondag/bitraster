@@ -39,12 +39,8 @@ import static grondag.bitraster.Constants.IDX_DX0;
 import static grondag.bitraster.Constants.IDX_DX1;
 import static grondag.bitraster.Constants.IDX_DY0;
 import static grondag.bitraster.Constants.IDX_DY1;
-import static grondag.bitraster.Constants.IDX_MAX_PIX_X;
-import static grondag.bitraster.Constants.IDX_MAX_PIX_Y;
 import static grondag.bitraster.Constants.IDX_MAX_TILE_ORIGIN_X;
 import static grondag.bitraster.Constants.IDX_MAX_TILE_ORIGIN_Y;
-import static grondag.bitraster.Constants.IDX_MIN_PIX_X;
-import static grondag.bitraster.Constants.IDX_MIN_PIX_Y;
 import static grondag.bitraster.Constants.IDX_MIN_TILE_ORIGIN_X;
 import static grondag.bitraster.Constants.IDX_POS0;
 import static grondag.bitraster.Constants.IDX_POS1;
@@ -301,10 +297,10 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final int position2 = edgePosition(cx0, cy0, cx1, cy1);
 		final int position3 = edgePosition(dx0, dy0, dx1, dy1);
 
-		data[IDX_MIN_PIX_X] = minPixelX;
-		data[IDX_MIN_PIX_Y] = minPixelY;
-		data[IDX_MAX_PIX_X] = maxPixelX;
-		data[IDX_MAX_PIX_Y] = maxPixelY;
+		this.minPixelX = minPixelX;
+		this.minPixelY = minPixelY;
+		this.maxPixelX = maxPixelX;
+		this.maxPixelY = maxPixelY;
 		data[IDX_AX0] = ax0;
 		data[IDX_AY0] = ay0;
 		data[IDX_AX1] = ax1;
@@ -471,10 +467,10 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final int position2 = edgePosition(cx0, cy0, cx1, cy1);
 		final int position3 = edgePosition(dx0, dy0, dx1, dy1);
 
-		data[IDX_MIN_PIX_X] = minPixelX;
-		data[IDX_MIN_PIX_Y] = minPixelY;
-		data[IDX_MAX_PIX_X] = maxPixelX;
-		data[IDX_MAX_PIX_Y] = maxPixelY;
+		this.minPixelX = minPixelX;
+		this.minPixelY = minPixelY;
+		this.maxPixelX = maxPixelX;
+		this.maxPixelY = maxPixelY;
 		data[IDX_AX0] = ax0;
 		data[IDX_AY0] = ay0;
 		data[IDX_AX1] = ax1;
@@ -630,10 +626,10 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final int position2 = edgePosition(cx0, cy0, cx1, cy1);
 		final int position3 = edgePosition(dx0, dy0, dx1, dy1);
 
-		data[IDX_MIN_PIX_X] = minPixelX;
-		data[IDX_MIN_PIX_Y] = minPixelY;
-		data[IDX_MAX_PIX_X] = maxPixelX;
-		data[IDX_MAX_PIX_Y] = maxPixelY;
+		this.minPixelX = minPixelX;
+		this.minPixelY = minPixelY;
+		this.maxPixelX = maxPixelX;
+		this.maxPixelY = maxPixelY;
 		data[IDX_AX0] = ax0;
 		data[IDX_AY0] = ay0;
 		data[IDX_AX1] = ax1;
@@ -775,10 +771,10 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final int position2 = edgePosition(cx0, cy0, cx1, cy1);
 		final int position3 = edgePosition(dx0, dy0, dx1, dy1);
 
-		data[IDX_MIN_PIX_X] = minPixelX;
-		data[IDX_MIN_PIX_Y] = minPixelY;
-		data[IDX_MAX_PIX_X] = maxPixelX;
-		data[IDX_MAX_PIX_Y] = maxPixelY;
+		this.minPixelX = minPixelX;
+		this.minPixelY = minPixelY;
+		this.maxPixelX = maxPixelX;
+		this.maxPixelY = maxPixelY;
 		data[IDX_AX0] = ax0;
 		data[IDX_AY0] = ay0;
 		data[IDX_AX1] = ax1;

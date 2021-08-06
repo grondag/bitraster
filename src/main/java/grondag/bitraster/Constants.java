@@ -34,7 +34,7 @@ public class Constants {
 	static final int PRECISE_PIXEL_SIZE = 1 << PRECISION_BITS;
 	static final int PRECISE_PIXEL_CENTER = PRECISE_PIXEL_SIZE / 2;
 	static final int SCANT_PRECISE_PIXEL_CENTER = PRECISE_PIXEL_CENTER - 1;
-	static final int TILE_WIDTH = 128;
+	static final int TILE_WIDTH = 256;
 	static final int TILE_WIDTH_BITS = Integer.bitCount(TILE_WIDTH - 1);
 	static final int TILE_ADDRESS_SHIFT_X = TILE_AXIS_SHIFT; // starts at 6 bits, but bottom 3 are part of low 6 bits
 	public static final int PIXEL_WIDTH = TILE_WIDTH * TILE_PIXEL_DIAMETER;
@@ -47,8 +47,8 @@ public class Constants {
 	 * clamp to this to ensure value + half pixel rounds down to last pixel.
 	 */
 	static final int PRECISE_WIDTH_CLAMP = PRECISE_WIDTH - PRECISE_PIXEL_CENTER;
-	static final int TILE_HEIGHT = 64;
-	static final int TILE_HEIGHT_BITS = Integer.bitCount(TILE_HEIGHT - 1);
+	static final int TILE_HEIGHT = 256;
+	//static final int TILE_HEIGHT_BITS = Integer.bitCount(TILE_HEIGHT - 1);
 	static final int TILE_ADDRESS_SHIFT_Y = TILE_ADDRESS_SHIFT_X + TILE_WIDTH_BITS - TILE_AXIS_SHIFT;
 	public static final int PIXEL_HEIGHT = TILE_HEIGHT * TILE_PIXEL_DIAMETER;
 	static final int MAX_PIXEL_Y = PIXEL_HEIGHT - 1;
@@ -257,13 +257,7 @@ public class Constants {
 	static final int EVENTS_LENGTH = PIXEL_HEIGHT * 2;
 	static final int IDX_VERTEX_DATA = IDX_EVENTS + EVENTS_LENGTH;
 
-	// Bounds of current triangle - pixel coordinates
-	static final int IDX_MIN_PIX_X = IDX_VERTEX_DATA + VERTEX_DATA_LENGTH;
-	static final int IDX_MIN_PIX_Y = IDX_MIN_PIX_X + 1;
-	static final int IDX_MAX_PIX_X = IDX_MIN_PIX_Y + 1;
-	static final int IDX_MAX_PIX_Y = IDX_MAX_PIX_X + 1;
-
-	static final int IDX_CLIP_X = IDX_MAX_PIX_Y + 1;
+	static final int IDX_CLIP_X = IDX_VERTEX_DATA + VERTEX_DATA_LENGTH;
 	static final int IDX_CLIP_Y = IDX_CLIP_X + 1;
 
 	static final int IDX_POS0 = IDX_CLIP_Y + 1;

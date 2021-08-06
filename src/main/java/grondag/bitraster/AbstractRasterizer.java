@@ -124,12 +124,8 @@ import static grondag.bitraster.Constants.IDX_DX1;
 import static grondag.bitraster.Constants.IDX_DY0;
 import static grondag.bitraster.Constants.IDX_DY1;
 import static grondag.bitraster.Constants.IDX_EVENTS;
-import static grondag.bitraster.Constants.IDX_MAX_PIX_X;
-import static grondag.bitraster.Constants.IDX_MAX_PIX_Y;
 import static grondag.bitraster.Constants.IDX_MAX_TILE_ORIGIN_X;
 import static grondag.bitraster.Constants.IDX_MAX_TILE_ORIGIN_Y;
-import static grondag.bitraster.Constants.IDX_MIN_PIX_X;
-import static grondag.bitraster.Constants.IDX_MIN_PIX_Y;
 import static grondag.bitraster.Constants.IDX_MIN_TILE_ORIGIN_X;
 import static grondag.bitraster.Constants.IDX_POS0;
 import static grondag.bitraster.Constants.IDX_POS1;
@@ -174,6 +170,9 @@ public abstract class AbstractRasterizer {
 	final int[] data = new int[DATA_LENGTH];
 	final long[] tiles = new long[TILE_COUNT];
 	final EventFiller[] EVENT_FILLERS = new EventFiller[0x1000];
+
+	// Bounds of current triangle - pixel coordinates
+	protected int minPixelX, minPixelY, maxPixelX, maxPixelY;
 
 	{
 		EVENT_FILLERS[EVENT_0123_RRRR] = () -> {
@@ -628,7 +627,7 @@ public abstract class AbstractRasterizer {
 		}
 
 		// Don't draw single points
-		if ((data[IDX_MIN_PIX_X] == data[IDX_MAX_PIX_X] && data[IDX_MIN_PIX_Y] == data[IDX_MAX_PIX_Y])) {
+		if (minPixelX == maxPixelX && minPixelY == maxPixelY) {
 			return;
 		}
 
@@ -642,9 +641,10 @@ public abstract class AbstractRasterizer {
 			return false;
 		}
 
-		if ((data[IDX_MIN_PIX_X] == data[IDX_MAX_PIX_X] && data[IDX_MIN_PIX_Y] == data[IDX_MAX_PIX_Y])) {
-			final int px = data[IDX_MIN_PIX_X];
-			final int py = data[IDX_MIN_PIX_Y];
+		final int px = minPixelX;
+		final int py = minPixelY;
+
+		if (px == maxPixelX && py == maxPixelY) {
 			return px >= 0 && py >= 0 && px < PIXEL_WIDTH && py < PIXEL_HEIGHT && isPixelClear(px, py);
 		} else {
 			return isQuadPartiallyClear();
@@ -707,9 +707,10 @@ public abstract class AbstractRasterizer {
 			return false;
 		}
 
-		if ((data[IDX_MIN_PIX_X] == data[IDX_MAX_PIX_X] && data[IDX_MIN_PIX_Y] == data[IDX_MAX_PIX_Y])) {
-			final int px = data[IDX_MIN_PIX_X];
-			final int py = data[IDX_MIN_PIX_Y];
+		final int px = minPixelX;
+		final int py = minPixelY;
+
+		if (px == maxPixelX && py == maxPixelY) {
 			return px >= 0 && py >= 0 && px < PIXEL_WIDTH && py < PIXEL_HEIGHT && isPixelSet(px, py);
 		} else {
 			return isQuadPartiallyOccluded();
@@ -842,7 +843,7 @@ public abstract class AbstractRasterizer {
 
 			if (py == 0) return;
 
-			final int y0 = data[IDX_MIN_PIX_Y] & TILE_AXIS_MASK;
+			final int y0 = minPixelY & TILE_AXIS_MASK;
 			final int start = IDX_EVENTS + (y0 << 1);
 			final int limit = IDX_EVENTS + (py > MAX_PIXEL_Y ? (MAX_PIXEL_Y << 1) : (py << 1));
 
@@ -862,7 +863,7 @@ public abstract class AbstractRasterizer {
 	 */
 	private void populateLeftEvents() {
 		final int[] data = this.data;
-		final int y0 = data[IDX_MIN_PIX_Y] & TILE_AXIS_MASK;
+		final int y0 = minPixelY & TILE_AXIS_MASK;
 		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
 		final int limit = IDX_EVENTS + (y1 << 1);
 
@@ -878,7 +879,7 @@ public abstract class AbstractRasterizer {
 		final int ax1 = data[a + 2];
 		final int ay1 = data[a + 3];
 
-		final int y0 = data[IDX_MIN_PIX_Y] & TILE_AXIS_MASK;
+		final int y0 = minPixelY & TILE_AXIS_MASK;
 		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
 		final int limit = (y1 << 1);
 		final int dx = ax1 - ax0;
@@ -904,7 +905,7 @@ public abstract class AbstractRasterizer {
 
 	private void populateRightEvents() {
 		final int[] data = this.data;
-		final int y0 = data[IDX_MIN_PIX_Y] & TILE_AXIS_MASK;
+		final int y0 = minPixelY & TILE_AXIS_MASK;
 		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
 		// difference from left: is high index in pairs
 		final int limit = (y1 << 1) + 1;
@@ -923,7 +924,7 @@ public abstract class AbstractRasterizer {
 		final int ax1 = data[a + 2];
 		final int ay1 = data[a + 3];
 
-		final int y0 = data[IDX_MIN_PIX_Y] & TILE_AXIS_MASK;
+		final int y0 = minPixelY & TILE_AXIS_MASK;
 		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
 		// difference from left: is high index in pairs
 		final int limit = (y1 << 1) + 1;
@@ -962,7 +963,7 @@ public abstract class AbstractRasterizer {
 		final int bx1 = data[b + 2];
 		final int by1 = data[b + 3];
 
-		final int y0 = data[IDX_MIN_PIX_Y] & TILE_AXIS_MASK;
+		final int y0 = minPixelY & TILE_AXIS_MASK;
 		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
 		final int limit = (y1 << 1);
 
@@ -1021,7 +1022,7 @@ public abstract class AbstractRasterizer {
 		final int cx1 = data[c + 2];
 		final int cy1 = data[c + 3];
 
-		final int y0 = data[IDX_MIN_PIX_Y] & TILE_AXIS_MASK;
+		final int y0 = minPixelY & TILE_AXIS_MASK;
 		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
 		final int limit = (y1 << 1);
 
@@ -1100,7 +1101,7 @@ public abstract class AbstractRasterizer {
 		final int dx1 = data[d + 2];
 		final int dy1 = data[d + 3];
 
-		final int y0 = data[IDX_MIN_PIX_Y] & TILE_AXIS_MASK;
+		final int y0 = minPixelY & TILE_AXIS_MASK;
 		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
 		final int limit = (y1 << 1);
 
@@ -1184,7 +1185,7 @@ public abstract class AbstractRasterizer {
 		final int bx1 = data[b + 2];
 		final int by1 = data[b + 3];
 
-		final int y0 = data[IDX_MIN_PIX_Y] & TILE_AXIS_MASK;
+		final int y0 = minPixelY & TILE_AXIS_MASK;
 		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
 		// difference from left: is high index in pairs
 		final int limit = (y1 << 1) + 1;
@@ -1248,7 +1249,7 @@ public abstract class AbstractRasterizer {
 		final int cx1 = data[c + 2];
 		final int cy1 = data[c + 3];
 
-		final int y0 = data[IDX_MIN_PIX_Y] & TILE_AXIS_MASK;
+		final int y0 = minPixelY & TILE_AXIS_MASK;
 		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
 		// difference from left: is high index in pairs
 		final int limit = (y1 << 1) + 1;
@@ -1334,7 +1335,7 @@ public abstract class AbstractRasterizer {
 		final int dx1 = data[d + 2];
 		final int dy1 = data[d + 3];
 
-		final int y0 = data[IDX_MIN_PIX_Y] & TILE_AXIS_MASK;
+		final int y0 = minPixelY & TILE_AXIS_MASK;
 		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
 		// difference from left: is high index in pairs
 		final int limit = (y1 << 1) + 1;
@@ -1853,10 +1854,10 @@ public abstract class AbstractRasterizer {
 		final int position2 = edgePosition(cx0, cy0, cx1, cy1);
 		final int position3 = edgePosition(dx0, dy0, dx1, dy1);
 
-		data[IDX_MIN_PIX_X] = minPixelX;
-		data[IDX_MIN_PIX_Y] = minPixelY;
-		data[IDX_MAX_PIX_X] = maxPixelX;
-		data[IDX_MAX_PIX_Y] = maxPixelY;
+		this.minPixelX = minPixelX;
+		this.minPixelY = minPixelY;
+		this.maxPixelX = maxPixelX;
+		this.maxPixelY = maxPixelY;
 		data[IDX_AX0] = ax0;
 		data[IDX_AY0] = ay0;
 		data[IDX_AX1] = ax1;

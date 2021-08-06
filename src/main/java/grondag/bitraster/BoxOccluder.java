@@ -1008,7 +1008,7 @@ public abstract class BoxOccluder {
 		return hasNearOccluders;
 	}
 
-	//final MicroTimer timer = new MicroTimer("boxTests.apply", 500000);
+	final MicroTimer timer = new MicroTimer("boxTests.apply", 500000);
 
 	public abstract boolean isBoxVisible(int packedBox);
 
@@ -1051,12 +1051,12 @@ public abstract class BoxOccluder {
 			outcome |= NORTH;
 		}
 
-		//		timer.start();
-		//		final boolean result = boxTests[outcome].apply(x0, y0, z0, x1, y1, z1);
-		//		timer.stop();
-		//
-		//		return result;
-		return partiallyClearTests[outcome].apply(x0, y0, z0, x1, y1, z1);
+		timer.start();
+		final boolean result = partiallyClearTests[outcome].apply(x0, y0, z0, x1, y1, z1);
+		timer.stop();
+
+		return result;
+		//return partiallyClearTests[outcome].apply(x0, y0, z0, x1, y1, z1);
 	}
 
 	public final boolean isEmptyRegionVisible(int originX, int originY, int originZ) {
