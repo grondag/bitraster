@@ -283,25 +283,5 @@ public class Constants {
 	static final int IDX_DX1 = IDX_DY0 + 1;
 	static final int IDX_DY1 = IDX_DX1 + 1;
 
-	static final int IDX_MIN_TILE_ORIGIN_X = IDX_DY1 + 1;
-	static final int IDX_MAX_TILE_ORIGIN_X = IDX_MIN_TILE_ORIGIN_X + 1;
-	static final int IDX_MAX_TILE_ORIGIN_Y = IDX_MAX_TILE_ORIGIN_X + 1;
-
-	static final int IDX_TILE_INDEX = IDX_MAX_TILE_ORIGIN_Y + 1;
-	static final int IDX_TILE_ORIGIN_X = IDX_TILE_INDEX + 1;
-	static final int IDX_TILE_ORIGIN_Y = IDX_TILE_ORIGIN_X + 1;
-
-	static final int IDX_SAVE_TILE_INDEX = IDX_TILE_ORIGIN_Y + 1;
-	static final int IDX_SAVE_TILE_ORIGIN_X = IDX_SAVE_TILE_INDEX + 1;
-	static final int IDX_SAVE_TILE_ORIGIN_Y = IDX_SAVE_TILE_ORIGIN_X + 1;
-
-	static final int DATA_LENGTH = IDX_SAVE_TILE_ORIGIN_Y + 1;
-
-	// For abandoned traversal scheme
-	//	static final int MAX_TILE_X = TILE_WIDTH - 1;
-	//	static final int MAX_TILE_ORIGIN_Y = PIXEL_HEIGHT - TILE_PIXEL_DIAMETER;
-	//	static final int MAX_TILE_ORIGIN_X = PIXEL_WIDTH - TILE_PIXEL_DIAMETER;
-	//	static final long TILE_MASK_UP = 0xFF00000000000000L;
-	//	static final long TILE_MASK_LEFT = 0x0101010101010101L;
-	//	static final long TILE_MASK_RIGHT = 0x8080808080808080L;
+	static final int DATA_LENGTH = IDX_DY1 + 1;
 }

@@ -124,15 +124,6 @@ import static grondag.bitraster.Constants.IDX_DX1;
 import static grondag.bitraster.Constants.IDX_DY0;
 import static grondag.bitraster.Constants.IDX_DY1;
 import static grondag.bitraster.Constants.IDX_EVENTS;
-import static grondag.bitraster.Constants.IDX_MAX_TILE_ORIGIN_X;
-import static grondag.bitraster.Constants.IDX_MAX_TILE_ORIGIN_Y;
-import static grondag.bitraster.Constants.IDX_MIN_TILE_ORIGIN_X;
-import static grondag.bitraster.Constants.IDX_SAVE_TILE_INDEX;
-import static grondag.bitraster.Constants.IDX_SAVE_TILE_ORIGIN_X;
-import static grondag.bitraster.Constants.IDX_SAVE_TILE_ORIGIN_Y;
-import static grondag.bitraster.Constants.IDX_TILE_INDEX;
-import static grondag.bitraster.Constants.IDX_TILE_ORIGIN_X;
-import static grondag.bitraster.Constants.IDX_TILE_ORIGIN_Y;
 import static grondag.bitraster.Constants.IDX_VERTEX_DATA;
 import static grondag.bitraster.Constants.MAX_PIXEL_Y;
 import static grondag.bitraster.Constants.PIXEL_HEIGHT;
@@ -172,6 +163,10 @@ public abstract class AbstractRasterizer {
 
 	/** Classifies each edge, holding results of {@link #edgePosition(int, int, int, int)}. */
 	protected int pos0, pos1, pos2, pos3;
+
+	protected int minTileOriginX, maxTileOriginX, maxTileOriginY;
+	protected int tileIndex, tileOriginX, tileOriginY;
+	protected int saveTileIndex, saveTileOriginX, saveTileOriginY;
 
 	{
 		EVENT_FILLERS[EVENT_0123_RRRR] = () -> {
@@ -651,10 +646,9 @@ public abstract class AbstractRasterizer {
 	}
 
 	final boolean isQuadPartiallyClear() {
-		final int[] data = this.data;
-		final int minTileOriginX = data[IDX_MIN_TILE_ORIGIN_X];
-		final int maxTileOriginX = data[IDX_MAX_TILE_ORIGIN_X];
-		final int maxTileOriginY = data[IDX_MAX_TILE_ORIGIN_Y];
+		final int minTileOriginX = this.minTileOriginX;
+		final int maxTileOriginX = this.maxTileOriginX;
+		final int maxTileOriginY = this.maxTileOriginY;
 		boolean goRight = true;
 
 		while (true) {
@@ -663,8 +657,8 @@ public abstract class AbstractRasterizer {
 			}
 
 			if (goRight) {
-				if (data[IDX_TILE_ORIGIN_X] == maxTileOriginX) {
-					if (data[IDX_TILE_ORIGIN_Y] == maxTileOriginY) {
+				if (tileOriginX == maxTileOriginX) {
+					if (tileOriginY == maxTileOriginY) {
 						return false;
 					} else {
 						moveTileUp();
@@ -674,8 +668,8 @@ public abstract class AbstractRasterizer {
 					moveTileRight();
 				}
 			} else {
-				if (data[IDX_TILE_ORIGIN_X] == minTileOriginX) {
-					if (data[IDX_TILE_ORIGIN_Y] == maxTileOriginY) {
+				if (tileOriginX == minTileOriginX) {
+					if (tileOriginY == maxTileOriginY) {
 						return false;
 					} else {
 						moveTileUp();
@@ -689,7 +683,7 @@ public abstract class AbstractRasterizer {
 	}
 
 	final boolean isQuadPartiallyClearInner() {
-		final long word = tiles[data[IDX_TILE_INDEX]];
+		final long word = tiles[tileIndex];
 
 		// nothing to test if fully occluded
 		if (word == -1L) {
@@ -717,10 +711,9 @@ public abstract class AbstractRasterizer {
 	}
 
 	final boolean isQuadPartiallyOccluded() {
-		final int[] data = this.data;
-		final int minTileOriginX = data[IDX_MIN_TILE_ORIGIN_X];
-		final int maxTileOriginX = data[IDX_MAX_TILE_ORIGIN_X];
-		final int maxTileOriginY = data[IDX_MAX_TILE_ORIGIN_Y];
+		final int minTileOriginX = this.minTileOriginX;
+		final int maxTileOriginX = this.maxTileOriginX;
+		final int maxTileOriginY = this.maxTileOriginY;
 		boolean goRight = true;
 
 		while (true) {
@@ -729,8 +722,8 @@ public abstract class AbstractRasterizer {
 			}
 
 			if (goRight) {
-				if (data[IDX_TILE_ORIGIN_X] == maxTileOriginX) {
-					if (data[IDX_TILE_ORIGIN_Y] == maxTileOriginY) {
+				if (tileOriginX == maxTileOriginX) {
+					if (tileOriginY == maxTileOriginY) {
 						return false;
 					} else {
 						moveTileUp();
@@ -740,8 +733,8 @@ public abstract class AbstractRasterizer {
 					moveTileRight();
 				}
 			} else {
-				if (data[IDX_TILE_ORIGIN_X] == minTileOriginX) {
-					if (data[IDX_TILE_ORIGIN_Y] == maxTileOriginY) {
+				if (tileOriginX == minTileOriginX) {
+					if (tileOriginY == maxTileOriginY) {
 						return false;
 					} else {
 						moveTileUp();
@@ -755,7 +748,7 @@ public abstract class AbstractRasterizer {
 	}
 
 	final boolean isQuadPartiallyOccludedInner() {
-		final long word = tiles[data[IDX_TILE_INDEX]];
+		final long word = tiles[tileIndex];
 
 		// nothing to test if fully clear
 		if (word == 0) {
@@ -766,18 +759,17 @@ public abstract class AbstractRasterizer {
 	}
 
 	final void drawQuad() {
-		final int[] data = this.data;
-		final int minTileOriginX = data[IDX_MIN_TILE_ORIGIN_X];
-		final int maxTileOriginX = data[IDX_MAX_TILE_ORIGIN_X];
-		final int maxTileOriginY = data[IDX_MAX_TILE_ORIGIN_Y];
+		final int minTileOriginX = this.minTileOriginX;
+		final int maxTileOriginX = this.maxTileOriginX;
+		final int maxTileOriginY = this.maxTileOriginY;
 		boolean goRight = true;
 
 		while (true) {
 			drawQuadInner();
 
 			if (goRight) {
-				if (data[IDX_TILE_ORIGIN_X] == maxTileOriginX) {
-					if (data[IDX_TILE_ORIGIN_Y] == maxTileOriginY) {
+				if (tileOriginX == maxTileOriginX) {
+					if (tileOriginY == maxTileOriginY) {
 						return;
 					} else {
 						moveTileUp();
@@ -787,8 +779,8 @@ public abstract class AbstractRasterizer {
 					moveTileRight();
 				}
 			} else {
-				if (data[IDX_TILE_ORIGIN_X] == minTileOriginX) {
-					if (data[IDX_TILE_ORIGIN_Y] == maxTileOriginY) {
+				if (tileOriginX == minTileOriginX) {
+					if (tileOriginY == maxTileOriginY) {
 						return;
 					} else {
 						moveTileUp();
@@ -802,11 +794,11 @@ public abstract class AbstractRasterizer {
 	}
 
 	final void drawQuadInner() {
-		assert data[IDX_TILE_ORIGIN_Y] < PIXEL_HEIGHT;
-		assert data[IDX_TILE_ORIGIN_X] < PIXEL_WIDTH;
-		assert data[IDX_TILE_ORIGIN_X] >= 0;
+		assert tileOriginY < PIXEL_HEIGHT;
+		assert tileOriginX < PIXEL_WIDTH;
+		assert tileOriginX >= 0;
 
-		final int tileIndex = data[IDX_TILE_INDEX];
+		final int tileIndex = this.tileIndex;
 
 		long word = tiles[tileIndex];
 
@@ -827,7 +819,7 @@ public abstract class AbstractRasterizer {
 
 			if (py == MAX_PIXEL_Y) return;
 
-			final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
+			final int y1 = maxTileOriginY + 7;
 			final int start = IDX_EVENTS + (py < 0 ? 0 : (py << 1));
 			final int limit = IDX_EVENTS + (y1 << 1);
 
@@ -863,7 +855,7 @@ public abstract class AbstractRasterizer {
 	private void populateLeftEvents() {
 		final int[] data = this.data;
 		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
+		final int y1 = maxTileOriginY + 7;
 		final int limit = IDX_EVENTS + (y1 << 1);
 
 		for (int y = IDX_EVENTS + (y0 << 1); y <= limit; y += 2) {
@@ -879,7 +871,7 @@ public abstract class AbstractRasterizer {
 		final int ay1 = data[a + 3];
 
 		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
+		final int y1 = maxTileOriginY + 7;
 		final int limit = (y1 << 1);
 		final int dx = ax1 - ax0;
 
@@ -905,7 +897,7 @@ public abstract class AbstractRasterizer {
 	private void populateRightEvents() {
 		final int[] data = this.data;
 		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
+		final int y1 = maxTileOriginY + 7;
 		// difference from left: is high index in pairs
 		final int limit = (y1 << 1) + 1;
 
@@ -924,7 +916,7 @@ public abstract class AbstractRasterizer {
 		final int ay1 = data[a + 3];
 
 		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
+		final int y1 = maxTileOriginY + 7;
 		// difference from left: is high index in pairs
 		final int limit = (y1 << 1) + 1;
 		final int dx = ax1 - ax0;
@@ -963,7 +955,7 @@ public abstract class AbstractRasterizer {
 		final int by1 = data[b + 3];
 
 		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
+		final int y1 = maxTileOriginY + 7;
 		final int limit = (y1 << 1);
 
 		final long aStep;
@@ -1022,7 +1014,7 @@ public abstract class AbstractRasterizer {
 		final int cy1 = data[c + 3];
 
 		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
+		final int y1 = maxTileOriginY + 7;
 		final int limit = (y1 << 1);
 
 		final long aStep;
@@ -1101,7 +1093,7 @@ public abstract class AbstractRasterizer {
 		final int dy1 = data[d + 3];
 
 		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
+		final int y1 = maxTileOriginY + 7;
 		final int limit = (y1 << 1);
 
 		final long aStep;
@@ -1185,7 +1177,7 @@ public abstract class AbstractRasterizer {
 		final int by1 = data[b + 3];
 
 		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
+		final int y1 = maxTileOriginY + 7;
 		// difference from left: is high index in pairs
 		final int limit = (y1 << 1) + 1;
 
@@ -1249,7 +1241,7 @@ public abstract class AbstractRasterizer {
 		final int cy1 = data[c + 3];
 
 		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
+		final int y1 = maxTileOriginY + 7;
 		// difference from left: is high index in pairs
 		final int limit = (y1 << 1) + 1;
 
@@ -1335,7 +1327,7 @@ public abstract class AbstractRasterizer {
 		final int dy1 = data[d + 3];
 
 		final int y0 = minPixelY & TILE_AXIS_MASK;
-		final int y1 = data[IDX_MAX_TILE_ORIGIN_Y] + 7;
+		final int y1 = maxTileOriginY + 7;
 		// difference from left: is high index in pairs
 		final int limit = (y1 << 1) + 1;
 
@@ -1513,64 +1505,64 @@ public abstract class AbstractRasterizer {
 	}
 
 	void moveTileRight() {
-		data[IDX_TILE_ORIGIN_X] += 8;
+		tileOriginX += 8;
 
-		if ((data[IDX_TILE_INDEX] & TILE_INDEX_LOW_X_MASK) == TILE_INDEX_LOW_X_MASK) {
-			data[IDX_TILE_INDEX] = (data[IDX_TILE_INDEX] & ~TILE_INDEX_LOW_X_MASK) + TILE_INDEX_HIGH_X;
+		if ((tileIndex & TILE_INDEX_LOW_X_MASK) == TILE_INDEX_LOW_X_MASK) {
+			tileIndex = (tileIndex & ~TILE_INDEX_LOW_X_MASK) + TILE_INDEX_HIGH_X;
 		} else {
-			data[IDX_TILE_INDEX] += 1;
+			++tileIndex;
 		}
 
-		assert data[IDX_TILE_INDEX] == tileIndex(data[IDX_TILE_ORIGIN_X] >> TILE_AXIS_SHIFT, data[IDX_TILE_ORIGIN_Y] >> TILE_AXIS_SHIFT);
-		assert data[IDX_TILE_ORIGIN_X] < PIXEL_WIDTH;
+		assert tileIndex == tileIndex(tileOriginX >> TILE_AXIS_SHIFT, tileOriginY >> TILE_AXIS_SHIFT);
+		assert tileOriginX < PIXEL_WIDTH;
 	}
 
 	void moveTileLeft() {
-		data[IDX_TILE_ORIGIN_X] -= 8;
+		tileOriginX -= 8;
 
-		if ((data[IDX_TILE_INDEX] & TILE_INDEX_LOW_X_MASK) == 0) {
-			data[IDX_TILE_INDEX] |= TILE_INDEX_LOW_X_MASK;
-			data[IDX_TILE_INDEX] -= TILE_INDEX_HIGH_X;
+		if ((tileIndex & TILE_INDEX_LOW_X_MASK) == 0) {
+			tileIndex |= TILE_INDEX_LOW_X_MASK;
+			tileIndex -= TILE_INDEX_HIGH_X;
 		} else {
-			data[IDX_TILE_INDEX] -= 1;
+			tileIndex -= 1;
 		}
 
-		assert data[IDX_TILE_INDEX] == tileIndex(data[IDX_TILE_ORIGIN_X] >> TILE_AXIS_SHIFT, data[IDX_TILE_ORIGIN_Y] >> TILE_AXIS_SHIFT);
-		assert data[IDX_TILE_ORIGIN_X] >= 0;
+		assert tileIndex == tileIndex(tileOriginX >> TILE_AXIS_SHIFT, tileOriginY >> TILE_AXIS_SHIFT);
+		assert tileOriginX >= 0;
 	}
 
 	void moveTileUp() {
-		data[IDX_TILE_ORIGIN_Y] += 8;
+		tileOriginY += 8;
 
-		if ((data[IDX_TILE_INDEX] & TILE_INDEX_LOW_Y_MASK) == TILE_INDEX_LOW_Y_MASK) {
-			data[IDX_TILE_INDEX] = (data[IDX_TILE_INDEX] & ~TILE_INDEX_LOW_Y_MASK) + TILE_INDEX_HIGH_Y;
+		if ((tileIndex & TILE_INDEX_LOW_Y_MASK) == TILE_INDEX_LOW_Y_MASK) {
+			tileIndex = (tileIndex & ~TILE_INDEX_LOW_Y_MASK) + TILE_INDEX_HIGH_Y;
 		} else {
-			data[IDX_TILE_INDEX] += TILE_INDEX_LOW_Y;
+			tileIndex += TILE_INDEX_LOW_Y;
 		}
 
-		assert data[IDX_TILE_INDEX] == tileIndex(data[IDX_TILE_ORIGIN_X] >> TILE_AXIS_SHIFT, data[IDX_TILE_ORIGIN_Y] >> TILE_AXIS_SHIFT);
-		assert data[IDX_TILE_ORIGIN_Y] < PIXEL_HEIGHT;
+		assert tileIndex == tileIndex(tileOriginX >> TILE_AXIS_SHIFT, tileOriginY >> TILE_AXIS_SHIFT);
+		assert tileOriginY < PIXEL_HEIGHT;
 	}
 
 	void pushTile() {
-		data[IDX_SAVE_TILE_ORIGIN_X] = data[IDX_TILE_ORIGIN_X];
-		data[IDX_SAVE_TILE_ORIGIN_Y] = data[IDX_TILE_ORIGIN_Y];
-		data[IDX_SAVE_TILE_INDEX] = data[IDX_TILE_INDEX];
+		saveTileOriginX = tileOriginX;
+		saveTileOriginY = tileOriginY;
+		saveTileIndex = tileIndex;
 	}
 
 	void popTile() {
-		data[IDX_TILE_ORIGIN_X] = data[IDX_SAVE_TILE_ORIGIN_X];
-		data[IDX_TILE_ORIGIN_Y] = data[IDX_SAVE_TILE_ORIGIN_Y];
-		data[IDX_TILE_INDEX] = data[IDX_SAVE_TILE_INDEX];
+		tileOriginX = saveTileOriginX;
+		tileOriginY = saveTileOriginY;
+		tileIndex = saveTileIndex;
 	}
 
 	long computeTileCoverage() {
 		final int[] data = this.data;
 
-		int y = data[IDX_TILE_ORIGIN_Y] << 1;
-		final int tx = data[IDX_TILE_ORIGIN_X];
+		int y = tileOriginY << 1;
+		final int tx = tileOriginX;
 
-		final int baseX = data[IDX_TILE_ORIGIN_X] + 7;
+		final int baseX = tileOriginX + 7;
 
 		long mask = 0;
 
@@ -1843,13 +1835,13 @@ public abstract class AbstractRasterizer {
 		final int maxPixelX = ((maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 		final int maxPixelY = ((maxY + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 
-		data[IDX_MIN_TILE_ORIGIN_X] = minPixelX & TILE_AXIS_MASK;
-		data[IDX_MAX_TILE_ORIGIN_X] = maxPixelX & TILE_AXIS_MASK;
-		data[IDX_MAX_TILE_ORIGIN_Y] = maxPixelY & TILE_AXIS_MASK;
+		minTileOriginX = minPixelX & TILE_AXIS_MASK;
+		maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
+		maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
 
-		data[IDX_TILE_ORIGIN_X] = minPixelX & TILE_AXIS_MASK;
-		data[IDX_TILE_ORIGIN_Y] = minPixelY & TILE_AXIS_MASK;
-		data[IDX_TILE_INDEX] = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
+		tileOriginX = minPixelX & TILE_AXIS_MASK;
+		tileOriginY = minPixelY & TILE_AXIS_MASK;
+		tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
 
 		final int position0 = edgePosition(ax0, ay0, ax1, ay1);
 		final int position1 = edgePosition(bx0, by0, bx1, by1);

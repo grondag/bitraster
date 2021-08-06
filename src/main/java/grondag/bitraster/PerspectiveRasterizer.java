@@ -37,12 +37,6 @@ import static grondag.bitraster.Constants.IDX_DX0;
 import static grondag.bitraster.Constants.IDX_DX1;
 import static grondag.bitraster.Constants.IDX_DY0;
 import static grondag.bitraster.Constants.IDX_DY1;
-import static grondag.bitraster.Constants.IDX_MAX_TILE_ORIGIN_X;
-import static grondag.bitraster.Constants.IDX_MAX_TILE_ORIGIN_Y;
-import static grondag.bitraster.Constants.IDX_MIN_TILE_ORIGIN_X;
-import static grondag.bitraster.Constants.IDX_TILE_INDEX;
-import static grondag.bitraster.Constants.IDX_TILE_ORIGIN_X;
-import static grondag.bitraster.Constants.IDX_TILE_ORIGIN_Y;
 import static grondag.bitraster.Constants.IDX_VERTEX_DATA;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT_CLAMP;
@@ -281,13 +275,13 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final int maxPixelX = ((maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 		final int maxPixelY = ((maxY + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 
-		data[IDX_MIN_TILE_ORIGIN_X] = minPixelX & TILE_AXIS_MASK;
-		data[IDX_MAX_TILE_ORIGIN_X] = maxPixelX & TILE_AXIS_MASK;
-		data[IDX_MAX_TILE_ORIGIN_Y] = maxPixelY & TILE_AXIS_MASK;
+		minTileOriginX = minPixelX & TILE_AXIS_MASK;
+		maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
+		maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
 
-		data[IDX_TILE_ORIGIN_X] = minPixelX & TILE_AXIS_MASK;
-		data[IDX_TILE_ORIGIN_Y] = minPixelY & TILE_AXIS_MASK;
-		data[IDX_TILE_INDEX] = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
+		tileOriginX = minPixelX & TILE_AXIS_MASK;
+		tileOriginY = minPixelY & TILE_AXIS_MASK;
+		tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
 
 		final int position0 = edgePosition(ax0, ay0, ax1, ay1);
 		final int position1 = edgePosition(bx0, by0, bx1, by1);
@@ -451,13 +445,13 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final int maxPixelX = ((maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 		final int maxPixelY = ((maxY + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 
-		data[IDX_MIN_TILE_ORIGIN_X] = minPixelX & TILE_AXIS_MASK;
-		data[IDX_MAX_TILE_ORIGIN_X] = maxPixelX & TILE_AXIS_MASK;
-		data[IDX_MAX_TILE_ORIGIN_Y] = maxPixelY & TILE_AXIS_MASK;
+		minTileOriginX = minPixelX & TILE_AXIS_MASK;
+		maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
+		maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
 
-		data[IDX_TILE_ORIGIN_X] = minPixelX & TILE_AXIS_MASK;
-		data[IDX_TILE_ORIGIN_Y] = minPixelY & TILE_AXIS_MASK;
-		data[IDX_TILE_INDEX] = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
+		tileOriginX = minPixelX & TILE_AXIS_MASK;
+		tileOriginY = minPixelY & TILE_AXIS_MASK;
+		tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
 
 		final int position0 = edgePosition(ax0, ay0, ax1, ay1);
 		final int position1 = edgePosition(bx0, by0, bx1, by1);
@@ -610,13 +604,13 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final int maxPixelX = ((maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 		final int maxPixelY = ((maxY + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 
-		data[IDX_MIN_TILE_ORIGIN_X] = minPixelX & TILE_AXIS_MASK;
-		data[IDX_MAX_TILE_ORIGIN_X] = maxPixelX & TILE_AXIS_MASK;
-		data[IDX_MAX_TILE_ORIGIN_Y] = maxPixelY & TILE_AXIS_MASK;
+		minTileOriginX = minPixelX & TILE_AXIS_MASK;
+		maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
+		maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
 
-		data[IDX_TILE_ORIGIN_X] = minPixelX & TILE_AXIS_MASK;
-		data[IDX_TILE_ORIGIN_Y] = minPixelY & TILE_AXIS_MASK;
-		data[IDX_TILE_INDEX] = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
+		tileOriginX = minPixelX & TILE_AXIS_MASK;
+		tileOriginY = minPixelY & TILE_AXIS_MASK;
+		tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
 
 		final int position0 = edgePosition(ax0, ay0, ax1, ay1);
 		final int position1 = edgePosition(bx0, by0, bx1, by1);
@@ -755,13 +749,13 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final int maxPixelX = ((maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 		final int maxPixelY = ((maxY + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 
-		data[IDX_MIN_TILE_ORIGIN_X] = minPixelX & TILE_AXIS_MASK;
-		data[IDX_MAX_TILE_ORIGIN_X] = maxPixelX & TILE_AXIS_MASK;
-		data[IDX_MAX_TILE_ORIGIN_Y] = maxPixelY & TILE_AXIS_MASK;
+		minTileOriginX = minPixelX & TILE_AXIS_MASK;
+		maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
+		maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
 
-		data[IDX_TILE_ORIGIN_X] = minPixelX & TILE_AXIS_MASK;
-		data[IDX_TILE_ORIGIN_Y] = minPixelY & TILE_AXIS_MASK;
-		data[IDX_TILE_INDEX] = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
+		tileOriginX = minPixelX & TILE_AXIS_MASK;
+		tileOriginY = minPixelY & TILE_AXIS_MASK;
+		tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
 
 		final int position0 = edgePosition(ax0, ay0, ax1, ay1);
 		final int position1 = edgePosition(bx0, by0, bx1, by1);
