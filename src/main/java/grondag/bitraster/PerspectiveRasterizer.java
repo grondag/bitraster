@@ -29,8 +29,6 @@ import static grondag.bitraster.Constants.IDX_BX0;
 import static grondag.bitraster.Constants.IDX_BX1;
 import static grondag.bitraster.Constants.IDX_BY0;
 import static grondag.bitraster.Constants.IDX_BY1;
-import static grondag.bitraster.Constants.IDX_CLIP_X;
-import static grondag.bitraster.Constants.IDX_CLIP_Y;
 import static grondag.bitraster.Constants.IDX_CX0;
 import static grondag.bitraster.Constants.IDX_CX1;
 import static grondag.bitraster.Constants.IDX_CY0;
@@ -67,6 +65,9 @@ import static grondag.bitraster.Constants.TILE_AXIS_SHIFT;
 import static grondag.bitraster.Indexer.tileIndex;
 
 public final class PerspectiveRasterizer extends AbstractRasterizer {
+	/** Holds results of {@link #clipNear(int, int)}. */
+	protected int clipX, clipY;
+
 	@Override void setupVertex(final int baseIndex, final int x, final int y, final int z) {
 		final int[] data = this.data;
 		final Matrix4L mvpMatrix = this.mvpMatrix;
@@ -115,8 +116,8 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final float w = (intW + (extW - intW) * wt);
 		final float iw = 1f / w;
 
-		data[IDX_CLIP_X] = Math.round(iw * x * HALF_PRECISE_WIDTH) + HALF_PRECISE_WIDTH;
-		data[IDX_CLIP_Y] = Math.round(iw * y * HALF_PRECISE_HEIGHT) + HALF_PRECISE_HEIGHT;
+		clipX = Math.round(iw * x * HALF_PRECISE_WIDTH) + HALF_PRECISE_WIDTH;
+		clipY = Math.round(iw * y * HALF_PRECISE_HEIGHT) + HALF_PRECISE_HEIGHT;
 	}
 
 	@Override
@@ -353,12 +354,12 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		cx0 = bx1;
 		cy0 = by1;
 		clipNear(v2, ext3);
-		cx1 = data[IDX_CLIP_X];
-		cy1 = data[IDX_CLIP_Y];
+		cx1 = clipX;
+		cy1 = clipY;
 
 		clipNear(v0, ext3);
-		dx0 = data[IDX_CLIP_X];
-		dy0 = data[IDX_CLIP_Y];
+		dx0 = clipX;
+		dy0 = clipY;
 		dx1 = ax0;
 		dy1 = ay0;
 
@@ -519,8 +520,8 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		bx0 = ax1;
 		by0 = ay1;
 		clipNear(v1, ext2);
-		bx1 = data[IDX_CLIP_X];
-		by1 = data[IDX_CLIP_Y];
+		bx1 = clipX;
+		by1 = clipY;
 
 		// force line c to be a single, existing point - entire line is clipped and should not influence anything
 		cx0 = ax0;
@@ -529,8 +530,8 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		cy1 = ay0;
 
 		clipNear(v0, ext3);
-		dx0 = data[IDX_CLIP_X];
-		dy0 = data[IDX_CLIP_Y];
+		dx0 = clipX;
+		dy0 = clipY;
 		dx1 = ax0;
 		dy1 = ay0;
 
@@ -672,8 +673,8 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		ax0 = data[v0 + PV_PX + IDX_VERTEX_DATA];
 		ay0 = data[v0 + PV_PY + IDX_VERTEX_DATA];
 		clipNear(v0, ext1);
-		ax1 = data[IDX_CLIP_X];
-		ay1 = data[IDX_CLIP_Y];
+		ax1 = clipX;
+		ay1 = clipY;
 
 		// force lines b & c to be a single, existing point - entire line is clipped and should not influence anything
 		bx0 = ax0;
@@ -686,8 +687,8 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		cy1 = ay0;
 
 		clipNear(v0, ext3);
-		dx0 = data[IDX_CLIP_X];
-		dy0 = data[IDX_CLIP_Y];
+		dx0 = clipX;
+		dy0 = clipY;
 		dx1 = ax0;
 		dy1 = ay0;
 

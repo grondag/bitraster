@@ -257,10 +257,7 @@ public class Constants {
 	static final int EVENTS_LENGTH = PIXEL_HEIGHT * 2;
 	static final int IDX_VERTEX_DATA = IDX_EVENTS + EVENTS_LENGTH;
 
-	static final int IDX_CLIP_X = IDX_VERTEX_DATA + VERTEX_DATA_LENGTH;
-	static final int IDX_CLIP_Y = IDX_CLIP_X + 1;
-
-	static final int IDX_POS0 = IDX_CLIP_Y + 1;
+	static final int IDX_POS0 = IDX_VERTEX_DATA + VERTEX_DATA_LENGTH;
 	static final int IDX_POS1 = IDX_POS0 + 1;
 	static final int IDX_POS2 = IDX_POS1 + 1;
 	static final int IDX_POS3 = IDX_POS2 + 1;
