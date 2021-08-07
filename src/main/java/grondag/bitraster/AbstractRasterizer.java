@@ -127,11 +127,13 @@ import static grondag.bitraster.Constants.PIXEL_HEIGHT;
 import static grondag.bitraster.Constants.PIXEL_WIDTH;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT_CLAMP;
-import static grondag.bitraster.Constants.PRECISE_HEIGHT_MAX;
+import static grondag.bitraster.Constants.PRECISE_INTEGER_MASK;
+import static grondag.bitraster.Constants.PRECISE_MAX_PIXEL_X;
+import static grondag.bitraster.Constants.PRECISE_MAX_PIXEL_Y;
+import static grondag.bitraster.Constants.PRECISE_PIXEL_CENTER;
 import static grondag.bitraster.Constants.PRECISE_PIXEL_SIZE;
 import static grondag.bitraster.Constants.PRECISE_WIDTH;
 import static grondag.bitraster.Constants.PRECISE_WIDTH_CLAMP;
-import static grondag.bitraster.Constants.PRECISE_WIDTH_MAX;
 import static grondag.bitraster.Constants.PRECISION_BITS;
 import static grondag.bitraster.Constants.PV_PX;
 import static grondag.bitraster.Constants.PV_PY;
@@ -1325,111 +1327,140 @@ public abstract class AbstractRasterizer {
 			y1 = swapY;
 		}
 
-		//y0 = (y0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-		//y1 = (y1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-		//x0 = (x0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-		//x1 = (x1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-
-		if (!(x0 < 0 && x1 < 0) && !(x0 > PRECISE_WIDTH_MAX && x1 > PRECISE_WIDTH_MAX)) {
-			if (!(y0 < 0 && y1 < 0) && !(y0 > PRECISE_HEIGHT_MAX && y1 > PRECISE_HEIGHT_MAX)) {
-				int ox0 = x0;
-				int ox1 = x1;
-				int oy0 = y0;
-				int oy1 = y1;
-
-				if (ox0 < 0) {
-					ox0 = 0;
-					oy0 = Math.round(((y1 - y0) / (float) (x1 - x0)) * (0 - x0) + y0);
-				} else if (ox0 > PRECISE_WIDTH_MAX) {
-					ox0 = PRECISE_WIDTH_MAX;
-					oy0 = Math.round(((y1 - y0) / (float) (x1 - x0)) * (PRECISE_WIDTH_MAX - x0) + y0);
-				}
-
-				if (oy0 < 0) {
-					oy0 = 0;
-					ox0 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (0 - y0) + x0);
-				} else if (oy0 > PRECISE_HEIGHT_MAX) {
-					oy0 = PRECISE_HEIGHT_MAX;
-					ox0 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (PRECISE_HEIGHT_MAX - y0) + x0);
-				}
-
-				// WIP: can make these conditional based on prior checks
-				if (ox1 < 0) {
-					ox1 = 0;
-					oy1 = Math.round(((y1 - y0) / (float) (x1 - x0)) * (0 - x0) + y0);
-				} else if (ox1 > PRECISE_WIDTH_MAX) {
-					ox1 = PRECISE_WIDTH_MAX;
-					oy1 = Math.round(((y1 - y0) / (float) (x1 - x0)) * (PRECISE_WIDTH_MAX - x0) + y0);
-				}
-
-				if (oy1 < 0) {
-					oy1 = 0;
-					ox1 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (0 - y0) + x0);
-				} else if (oy1 > PRECISE_HEIGHT_MAX) {
-					oy1 = PRECISE_HEIGHT_MAX;
-					ox1 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (PRECISE_HEIGHT_MAX - y0) + x0);
-				}
-
-				if (!(ox0 < 0 && ox1 < 0) && !(ox0 > PRECISE_WIDTH_MAX && ox1 > PRECISE_WIDTH_MAX)) {
-					lx0 = ox0;
-					lx1 = ox1;
-					ly0 = oy0;
-					ly1 = oy1;
-					return true;
-				} else {
-					return false;
-				}
-			}
+		if (y1 < PRECISE_PIXEL_CENTER || y0 > PRECISE_MAX_PIXEL_Y) {
+			return false;
 		}
 
-		return false;
+		if ((x0 < PRECISE_PIXEL_CENTER && x1 < PRECISE_PIXEL_CENTER) || (x0 > PRECISE_MAX_PIXEL_X && x1 > PRECISE_MAX_PIXEL_X)) {
+			return false;
+		}
+
+		int ox0 = x0;
+		int ox1 = x1;
+		int oy0 = y0;
+		int oy1 = y1;
+
+		if (oy0 < PRECISE_PIXEL_CENTER) {
+			oy0 = PRECISE_PIXEL_CENTER;
+		} else {
+			assert oy0 <= PRECISE_MAX_PIXEL_Y : "low Y shold not be above max";
+			oy0 = ((oy0 + SCANT_PRECISE_PIXEL_CENTER) & PRECISE_INTEGER_MASK) + PRECISE_PIXEL_CENTER;
+		}
+
+		ox0 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (oy0 - y0) + x0);
+
+		if (oy1 > PRECISE_MAX_PIXEL_Y) {
+			oy1 = PRECISE_MAX_PIXEL_Y;
+		} else {
+			assert oy1 >= PRECISE_PIXEL_CENTER : "high Y shold not be below min";
+			oy1 = ((oy1 + SCANT_PRECISE_PIXEL_CENTER) & PRECISE_INTEGER_MASK) + PRECISE_PIXEL_CENTER;
+		}
+
+		ox1 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (oy1 - y0) + x0);
+
+		if ((ox0 < PRECISE_PIXEL_CENTER && ox1 < PRECISE_MAX_PIXEL_Y) || (ox0 > PRECISE_MAX_PIXEL_X && ox1 > PRECISE_MAX_PIXEL_X)) {
+			return false;
+		}
+
+		lx0 = ox0;
+		lx1 = ox1;
+		ly0 = oy0;
+		ly1 = oy1;
+		return true;
 	}
 
 	private void populateLeftEventsB(int a) {
 		if (clipLine(a)) {
-			plotEvents(0);
+			plotEventsLeft();
 		}
 	}
 
 	/** Bresenham's algo. */
-	private void plotEvents(final int offset) {
-		final int x0 = (lx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+	private void plotEventsLeft() {
 		final int y0 = (ly0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-		final int x1 = (lx1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
 		final int y1 = (ly1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-		final int round = offset == 0 ? 0 : SCANT_PRECISE_PIXEL_CENTER;
 
 		assert y1 >= y0;
 
 		final int[] eventData = eventDataB;
-		final int dx = Math.abs(x1 - x0);
-		final int dy = y1 - y0;
-		final int sx = x0 < x1 ? PRECISE_PIXEL_SIZE : -PRECISE_PIXEL_SIZE;
 
-		int err = dx - dy;
-		int x = lx0;
-		int y = y0;
+		if (y0 == y1) {
+			eventData[y0 * 2] = (Math.min(lx0, lx1) + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		} else {
+			final int dx = Math.abs(lx1 - lx0);
+			final int dy = ly1 - ly0;
+			final int sx = lx0 < lx1 ? PRECISE_PIXEL_SIZE : -PRECISE_PIXEL_SIZE;
 
-		while (y <= y1) {
-			eventData[y * 2 + offset] = (x + round) >> PRECISION_BITS;
+			int err = dx - dy;
+			int x = lx0;
+			int y = y0;
 
-			final int e2 = 2 * err;
+			boolean didPutThisY = false;
 
-			if (e2 > -dy) {
-				err = err - dy;
-				x += sx;
+			while (y <= y1) {
+				if (!didPutThisY) {
+					eventData[y * 2] = (x + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+					didPutThisY = true;
+				}
+
+				final int e2 = 2 * err;
+
+				if (e2 > -dy) {
+					err = err - dy;
+					x += sx;
+				}
+
+				if (e2 < dx) {
+					err = err + dx;
+					++y;
+					didPutThisY = false;
+				} else if (y == y1 && didPutThisY) {
+					break;
+				}
 			}
+		}
+	}
 
-			if (e2 < dx) {
-				err = err + dx;
-				++y;
+	private void plotEventsRight() {
+		final int y0 = (ly0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		final int y1 = (ly1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+
+		assert y1 >= y0;
+
+		final int[] eventData = eventDataB;
+
+		if (y0 == y1) {
+			eventData[y0 * 2 + 1] = (Math.max(lx0, lx1) + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		} else {
+			final int dx = Math.abs(lx1 - lx0);
+			final int dy = ly1 - ly0;
+			final int sx = lx0 < lx1 ? PRECISE_PIXEL_SIZE : -PRECISE_PIXEL_SIZE;
+
+			int err = dx - dy;
+			int x = lx0;
+			int y = y0;
+
+			while (y <= y1) {
+				eventData[y * 2 + 1] = (x + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+
+				final int e2 = 2 * err;
+
+				if (e2 > -dy) {
+					err = err - dy;
+					x += sx;
+				}
+
+				if (e2 < dx) {
+					err = err + dx;
+					++y;
+				}
 			}
 		}
 	}
 
 	private void populateRightEventsB(int a) {
 		if (clipLine(a)) {
-			plotEvents(1);
+			plotEventsRight();
 		}
 	}
 
@@ -1968,7 +1999,7 @@ public abstract class AbstractRasterizer {
 		tileIndex = saveTileIndex;
 	}
 
-	long computeTileCoverage() {
+	long computeTileCoverageOld() {
 		final int[] data = eventData;
 
 		int y = tileOriginY << 1;
@@ -2095,7 +2126,11 @@ public abstract class AbstractRasterizer {
 		return mask;
 	}
 
-	long computeTileCoverageB() {
+	long computeTileCoverage() {
+		return computeTileCoverageOld();
+	}
+
+	long computeTileCoverageNew() {
 		final int[] data = eventDataB;
 
 		int y = tileOriginY << 1;
@@ -2333,10 +2368,6 @@ public abstract class AbstractRasterizer {
 			maxY = dy0;
 		}
 
-		if (((maxY - 1) | (maxX - 1) | (PRECISE_HEIGHT - 1 - minY) | (PRECISE_WIDTH - 1 - minX)) < 0) {
-			// NOOP?  TODO: why is this here?
-		}
-
 		if (maxY <= 0 || minY >= PRECISE_HEIGHT) {
 			return BOUNDS_OUTSIDE_OR_TOO_SMALL;
 		}
@@ -2422,44 +2453,48 @@ public abstract class AbstractRasterizer {
 	}
 
 	void prepareEvents(int eventKey) {
-		eventY0 = minPixelY & TILE_AXIS_MASK;
-		eventLimit = ((maxTileOriginY + 7) << 1);
-		EVENT_FILLERS[eventKey].apply();
+		prepareEventsOld(eventKey);
+	}
+
+	void prepareEventsNew(int eventKey) {
 		final int y0 = minPixelY << 1;
 		System.arraycopy(CLOSED_EVENT_DATA, 0, eventDataB, 0, EVENT_DATA_LENGTH);
 		System.arraycopy(OPEN_EVENT_DATA, y0, eventDataB, y0, (maxPixelY - minPixelY + 1) << 1);
 		EVENT_FILLERS_B[eventKey].apply();
+	}
 
-		boolean diff = false;
-
-		for (int y = minPixelY; y <= maxPixelY; ++y) {
-			final int j = y << 1;
-			final int k = j + 1;
-
-			if (eventData[j] != eventDataB[j] || eventData[k] != eventDataB[k]) {
-				diff = true;
-				break;
-			}
-		}
-
-		if (diff) {
-			for (int y = minPixelY; y <= maxPixelY; ++y) {
-				final int j = y << 1;
-				final int k = j + 1;
-				//final boolean leftMatch = eventData[j] == eventDataB[j];
-				//final boolean rightMatch = eventData[k] == eventDataB[k];
-				final boolean leftMatch = Math.abs(eventData[j] - eventDataB[j]) <= 1;
-				final boolean rightMatch = Math.abs(eventData[k] - eventDataB[k]) <= 1;
-				String match = leftMatch
-						? rightMatch ? "" : "R"
-						: rightMatch ? "L" : "LR";
-
-				System.out.println(String.format("%d left: %d vs %d   right: %d vs %d   %s",
-						y, eventData[j], eventDataB[j], eventData[k], eventDataB[k], match));
-			}
-
-			System.out.println();
-			EVENT_FILLERS_B[eventKey].apply();
-		}
+	void prepareEventsOld(int eventKey) {
+		eventY0 = minPixelY & TILE_AXIS_MASK;
+		eventLimit = ((maxTileOriginY + 7) << 1);
+		EVENT_FILLERS[eventKey].apply();
+		//boolean diff = false;
+		//
+		//for (int y = minPixelY; y <= maxPixelY; ++y) {
+		//	final int j = y << 1;
+		//	final int k = j + 1;
+		//
+		//	if (eventData[j] != eventDataB[j] || eventData[k] != eventDataB[k]) {
+		//		diff = true;
+		//		break;
+		//	}
+		//}
+		//
+		//if (diff) {
+		//	for (int y = minPixelY; y <= maxPixelY; ++y) {
+		//		final int j = y << 1;
+		//		final int k = j + 1;
+		//		final boolean leftMatch = eventData[j] == eventDataB[j];
+		//		final boolean rightMatch = eventData[k] == eventDataB[k];
+		//		String match = leftMatch
+		//				? rightMatch ? "" : "R"
+		//				: rightMatch ? "L" : "LR";
+		//
+		//		System.out.println(String.format("%d left: %d vs %d   right: %d vs %d   %s",
+		//				y, eventData[j], eventDataB[j], eventData[k], eventDataB[k], match));
+		//	}
+		//
+		//	System.out.println();
+		//	//EVENT_FILLERS_B[eventKey].apply();
+		//}
 	}
 }
