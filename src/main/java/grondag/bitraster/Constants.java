@@ -41,6 +41,7 @@ public class Constants {
 	static final int MAX_PIXEL_X = PIXEL_WIDTH - 1;
 	static final int HALF_PIXEL_WIDTH = PIXEL_WIDTH / 2;
 	static final int PRECISE_WIDTH = PIXEL_WIDTH << PRECISION_BITS;
+	static final int PRECISE_WIDTH_MAX = PRECISE_WIDTH - 1;
 	static final int HALF_PRECISE_WIDTH = PRECISE_WIDTH / 2;
 
 	/**
@@ -54,6 +55,7 @@ public class Constants {
 	static final int MAX_PIXEL_Y = PIXEL_HEIGHT - 1;
 	static final int HALF_PIXEL_HEIGHT = PIXEL_HEIGHT / 2;
 	static final int PRECISE_HEIGHT = PIXEL_HEIGHT << PRECISION_BITS;
+	static final int PRECISE_HEIGHT_MAX = PRECISE_HEIGHT - 1;
 	static final int HALF_PRECISE_HEIGHT = PRECISE_HEIGHT / 2;
 
 	/**

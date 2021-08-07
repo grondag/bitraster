@@ -127,8 +127,11 @@ import static grondag.bitraster.Constants.PIXEL_HEIGHT;
 import static grondag.bitraster.Constants.PIXEL_WIDTH;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT_CLAMP;
+import static grondag.bitraster.Constants.PRECISE_HEIGHT_MAX;
+import static grondag.bitraster.Constants.PRECISE_PIXEL_SIZE;
 import static grondag.bitraster.Constants.PRECISE_WIDTH;
 import static grondag.bitraster.Constants.PRECISE_WIDTH_CLAMP;
+import static grondag.bitraster.Constants.PRECISE_WIDTH_MAX;
 import static grondag.bitraster.Constants.PRECISION_BITS;
 import static grondag.bitraster.Constants.PV_PX;
 import static grondag.bitraster.Constants.PV_PY;
@@ -154,8 +157,22 @@ public abstract class AbstractRasterizer {
 	final Matrix4L mvpMatrix = new Matrix4L();
 	final int[] vertexData = new int[VERTEX_DATA_LENGTH];
 	final int[] eventData = new int[EVENT_DATA_LENGTH];
+	final int[] eventDataB = new int[EVENT_DATA_LENGTH];
 	final long[] tiles = new long[TILE_COUNT];
 	final EventFiller[] EVENT_FILLERS = new EventFiller[0x1000];
+	final EventFiller[] EVENT_FILLERS_B = new EventFiller[0x1000];
+
+	protected static final int[] CLOSED_EVENT_DATA = new int[EVENT_DATA_LENGTH];
+	protected static final int[] OPEN_EVENT_DATA = new int[EVENT_DATA_LENGTH];
+
+	static {
+		for (int y = 0; y < EVENT_DATA_LENGTH; ) {
+			OPEN_EVENT_DATA[y] = 0;
+			CLOSED_EVENT_DATA[y++] = PIXEL_WIDTH;
+			OPEN_EVENT_DATA[y] = PIXEL_WIDTH;
+			CLOSED_EVENT_DATA[y++] = -1;
+		}
+	}
 
 	/** Bounds of current triangle - pixel coordinates. */
 	protected int minPixelX, minPixelY, maxPixelX, maxPixelY;
@@ -606,15 +623,305 @@ public abstract class AbstractRasterizer {
 			populateFlatEvents(pos2, vertexData[IDX_CY0]);
 			populateFlatEvents(pos3, vertexData[IDX_DY0]);
 		};
-	}
 
-	/**
-	 * Call after bounds are computed but before any of the populateEventsRight/Left
-	 * methods.  Avoids recomputing these twice.
-	 */
-	protected void prepareEventBounds() {
-		eventY0 = minPixelY & TILE_AXIS_MASK;
-		eventLimit = ((maxTileOriginY + 7) << 1);
+		///////////////
+
+		EVENT_FILLERS_B[EVENT_0123_RRRR] = () -> {
+			populateRightEvents4B(IDX_AX0, IDX_BX0, IDX_CX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LRRR] = () -> {
+			populateLeftEventsB(IDX_AX0);
+			populateRightEvents3B(IDX_BX0, IDX_CX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FRRR] = () -> {
+			populateRightEvents3B(IDX_BX0, IDX_CX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RLRR] = () -> {
+			populateLeftEventsB(IDX_BX0);
+			populateRightEvents3B(IDX_AX0, IDX_CX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LLRR] = () -> {
+			populateLeftEvents2B(IDX_AX0, IDX_BX0);
+			populateRightEvents2B(IDX_CX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FLRR] = () -> {
+			populateLeftEventsB(IDX_BX0);
+			populateRightEvents2B(IDX_CX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RFRR] = () -> {
+			populateRightEvents3B(IDX_AX0, IDX_CX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LFRR] = () -> {
+			populateLeftEventsB(IDX_AX0);
+			populateRightEvents2B(IDX_CX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FFRR] = () -> {
+			populateRightEvents2B(IDX_CX0, IDX_DX0);
+		};
+
+		EVENT_FILLERS_B[EVENT_0123_RRLR] = () -> {
+			populateLeftEventsB(IDX_CX0);
+			populateRightEvents3B(IDX_AX0, IDX_BX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LRLR] = () -> {
+			populateLeftEvents2B(IDX_AX0, IDX_CX0);
+			populateRightEvents2B(IDX_BX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FRLR] = () -> {
+			populateLeftEventsB(IDX_CX0);
+			populateRightEvents2B(IDX_BX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RLLR] = () -> {
+			populateLeftEvents2B(IDX_BX0, IDX_CX0);
+			populateRightEvents2B(IDX_AX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LLLR] = () -> {
+			populateLeftEvents3B(IDX_AX0, IDX_BX0, IDX_CX0);
+			populateRightEventsB(IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FLLR] = () -> {
+			populateLeftEvents2B(IDX_BX0, IDX_CX0);
+			populateRightEventsB(IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RFLR] = () -> {
+			populateLeftEventsB(IDX_CX0);
+			populateRightEvents2B(IDX_AX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LFLR] = () -> {
+			populateLeftEvents2B(IDX_AX0, IDX_CX0);
+			populateRightEventsB(IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FFLR] = () -> {
+			populateLeftEventsB(IDX_CX0);
+			populateRightEventsB(IDX_DX0);
+		};
+
+		EVENT_FILLERS_B[EVENT_0123_LRFR] = () -> {
+			populateLeftEventsB(IDX_AX0);
+			populateRightEvents2B(IDX_BX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RRFR] = () -> {
+			populateRightEvents3B(IDX_AX0, IDX_BX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FRFR] = () -> {
+			populateRightEvents2B(IDX_BX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RLFR] = () -> {
+			populateLeftEventsB(IDX_BX0);
+			populateRightEvents2B(IDX_AX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LLFR] = () -> {
+			populateLeftEvents2B(IDX_AX0, IDX_BX0);
+			populateRightEventsB(IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FLFR] = () -> {
+			populateLeftEventsB(IDX_BX0);
+			populateRightEventsB(IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RFFR] = () -> {
+			populateRightEvents2B(IDX_AX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LFFR] = () -> {
+			populateLeftEventsB(IDX_AX0);
+			populateRightEventsB(IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FFFR] = () -> {
+			populateRightEventsB(IDX_DX0);
+		};
+
+		EVENT_FILLERS_B[EVENT_0123_RRRL] = () -> {
+			populateLeftEventsB(IDX_DX0);
+			populateRightEvents3B(IDX_AX0, IDX_BX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LRRL] = () -> {
+			populateLeftEvents2B(IDX_AX0, IDX_DX0);
+			populateRightEvents2B(IDX_BX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FRRL] = () -> {
+			populateLeftEventsB(IDX_DX0);
+			populateRightEvents2B(IDX_BX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RLRL] = () -> {
+			populateLeftEvents2B(IDX_BX0, IDX_DX0);
+			populateRightEvents2B(IDX_AX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LLRL] = () -> {
+			populateLeftEvents3B(IDX_AX0, IDX_BX0, IDX_DX0);
+			populateRightEventsB(IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FLRL] = () -> {
+			populateLeftEvents2B(IDX_BX0, IDX_DX0);
+			populateRightEventsB(IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RFRL] = () -> {
+			populateLeftEventsB(IDX_DX0);
+			populateRightEvents2B(IDX_AX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LFRL] = () -> {
+			populateLeftEvents2B(IDX_AX0, IDX_DX0);
+			populateRightEventsB(IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FFRL] = () -> {
+			populateLeftEventsB(IDX_DX0);
+			populateRightEventsB(IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RRLL] = () -> {
+			populateLeftEvents2B(IDX_CX0, IDX_DX0);
+			populateRightEvents2B(IDX_AX0, IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LRLL] = () -> {
+			populateLeftEvents3B(IDX_AX0, IDX_CX0, IDX_DX0);
+			populateRightEventsB(IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FRLL] = () -> {
+			populateLeftEvents2B(IDX_CX0, IDX_DX0);
+			populateRightEventsB(IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RLLL] = () -> {
+			populateLeftEvents3B(IDX_BX0, IDX_CX0, IDX_DX0);
+			populateRightEventsB(IDX_AX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LLLL] = () -> {
+			populateLeftEvents4B(IDX_AX0, IDX_BX0, IDX_CX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FLLL] = () -> {
+			populateLeftEvents3B(IDX_BX0, IDX_CX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RFLL] = () -> {
+			populateLeftEvents2B(IDX_CX0, IDX_DX0);
+			populateRightEventsB(IDX_AX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LFLL] = () -> {
+			populateLeftEvents3B(IDX_AX0, IDX_CX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FFLL] = () -> {
+			populateLeftEvents2B(IDX_CX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LRFL] = () -> {
+			populateLeftEvents2B(IDX_AX0, IDX_DX0);
+			populateRightEventsB(IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RRFL] = () -> {
+			populateLeftEventsB(IDX_DX0);
+			populateRightEvents2B(IDX_AX0, IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FRFL] = () -> {
+			populateLeftEventsB(IDX_DX0);
+			populateRightEventsB(IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RLFL] = () -> {
+			populateLeftEvents2B(IDX_BX0, IDX_DX0);
+			populateRightEventsB(IDX_AX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LLFL] = () -> {
+			populateLeftEvents3B(IDX_AX0, IDX_BX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FLFL] = () -> {
+			populateLeftEvents2B(IDX_BX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RFFL] = () -> {
+			populateLeftEventsB(IDX_DX0);
+			populateRightEventsB(IDX_AX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LFFL] = () -> {
+			populateLeftEvents2B(IDX_AX0, IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FFFL] = () -> {
+			populateLeftEventsB(IDX_DX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RRRF] = () -> {
+			populateRightEvents3B(IDX_AX0, IDX_BX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LRRF] = () -> {
+			populateLeftEventsB(IDX_AX0);
+			populateRightEvents2B(IDX_BX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FRRF] = () -> {
+			populateRightEvents2B(IDX_BX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RLRF] = () -> {
+			populateLeftEvents(IDX_BX0);
+			populateRightEvents2B(IDX_AX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LLRF] = () -> {
+			populateLeftEvents2B(IDX_AX0, IDX_BX0);
+			populateRightEventsB(IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FLRF] = () -> {
+			populateLeftEventsB(IDX_BX0);
+			populateRightEventsB(IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RFRF] = () -> {
+			populateRightEvents2B(IDX_AX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LFRF] = () -> {
+			populateLeftEventsB(IDX_AX0);
+			populateRightEventsB(IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FFRF] = () -> {
+			populateRightEventsB(IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RRLF] = () -> {
+			populateLeftEventsB(IDX_CX0);
+			populateRightEvents2B(IDX_AX0, IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LRLF] = () -> {
+			populateLeftEvents2B(IDX_AX0, IDX_CX0);
+			populateRightEventsB(IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FRLF] = () -> {
+			populateLeftEventsB(IDX_CX0);
+			populateRightEventsB(IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RLLF] = () -> {
+			populateLeftEvents2B(IDX_BX0, IDX_CX0);
+			populateRightEventsB(IDX_AX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LLLF] = () -> {
+			populateLeftEvents3B(IDX_AX0, IDX_BX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FLLF] = () -> {
+			populateLeftEvents2B(IDX_BX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RFLF] = () -> {
+			populateLeftEventsB(IDX_CX0);
+			populateRightEventsB(IDX_AX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LFLF] = () -> {
+			populateLeftEvents2B(IDX_AX0, IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FFLF] = () -> {
+			populateLeftEventsB(IDX_CX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LRFF] = () -> {
+			populateLeftEventsB(IDX_AX0);
+			populateRightEventsB(IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RRFF] = () -> {
+			populateRightEvents2B(IDX_AX0, IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FRFF] = () -> {
+			populateRightEventsB(IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RLFF] = () -> {
+			populateLeftEventsB(IDX_BX0);
+			populateRightEventsB(IDX_AX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LLFF] = () -> {
+			populateLeftEvents2B(IDX_AX0, IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FLFF] = () -> {
+			populateLeftEventsB(IDX_BX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_RFFF] = () -> {
+			populateRightEventsB(IDX_AX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_LFFF] = () -> {
+			populateLeftEventsB(IDX_AX0);
+		};
+		EVENT_FILLERS_B[EVENT_0123_FFFF] = () -> {
+			// fill it
+		};
 	}
 
 	final void copyFrom(AbstractRasterizer source) {
@@ -953,6 +1260,180 @@ public abstract class AbstractRasterizer {
 			}
 		}
 	}
+
+	//////////////////
+
+	private void populateLeftEvents2B(int a, int b) {
+		populateLeftEventsB(a);
+		populateLeftEventsB(b);
+	}
+
+	private void populateLeftEvents3B(int a, int b, int c) {
+		populateLeftEventsB(a);
+		populateLeftEventsB(b);
+		populateLeftEventsB(c);
+	}
+
+	private void populateLeftEvents4B(int a, int b, int c, int d) {
+		populateLeftEventsB(a);
+		populateLeftEventsB(b);
+		populateLeftEventsB(c);
+		populateLeftEventsB(d);
+	}
+
+	private void populateRightEvents2B(int a, int b) {
+		populateRightEventsB(a);
+		populateRightEventsB(b);
+	}
+
+	private void populateRightEvents3B(int a, int b, int c) {
+		populateRightEventsB(a);
+		populateRightEventsB(b);
+		populateRightEventsB(c);
+	}
+
+	private void populateRightEvents4B(int a, int b, int c, int d) {
+		populateRightEventsB(a);
+		populateRightEventsB(b);
+		populateRightEventsB(c);
+		populateRightEventsB(d);
+	}
+
+	protected int lx0, lx1, ly0, ly1;
+	/**
+	 * Based on "Another Simple but Faster Method for 2D Line Clipping".
+	 * Dimitrios Matthes and Vasileios Drakopoulos
+	 * International Journal of Computer Graphics & Animation (IJCGA) Vol.9, No.1/2/3, July 2019
+	 * Retrieved via https://aircconline.com/ijcga/V9N3/9319ijcga01.pdf
+	 *
+	 * @param line
+	 * @return true if line is within clipping bounds
+	 */
+	boolean clipLine(int line) {
+		final int[] vertexData = this.vertexData;
+		int x0 = vertexData[line];
+		int y0 = vertexData[line + 1];
+		int x1 = vertexData[line + 2];
+		int y1 = vertexData[line + 3];
+
+		if (y0 > y1) {
+			int swapX = x0;
+			int swapY = y0;
+			x0 = x1;
+			y0 = y1;
+			x1 = swapX;
+			y1 = swapY;
+		}
+
+		//y0 = (y0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		//y1 = (y1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		//x0 = (x0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		//x1 = (x1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+
+		if (!(x0 < 0 && x1 < 0) && !(x0 > PRECISE_WIDTH_MAX && x1 > PRECISE_WIDTH_MAX)) {
+			if (!(y0 < 0 && y1 < 0) && !(y0 > PRECISE_HEIGHT_MAX && y1 > PRECISE_HEIGHT_MAX)) {
+				int ox0 = x0;
+				int ox1 = x1;
+				int oy0 = y0;
+				int oy1 = y1;
+
+				if (ox0 < 0) {
+					ox0 = 0;
+					oy0 = Math.round(((y1 - y0) / (float) (x1 - x0)) * (0 - x0) + y0);
+				} else if (ox0 > PRECISE_WIDTH_MAX) {
+					ox0 = PRECISE_WIDTH_MAX;
+					oy0 = Math.round(((y1 - y0) / (float) (x1 - x0)) * (PRECISE_WIDTH_MAX - x0) + y0);
+				}
+
+				if (oy0 < 0) {
+					oy0 = 0;
+					ox0 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (0 - y0) + x0);
+				} else if (oy0 > PRECISE_HEIGHT_MAX) {
+					oy0 = PRECISE_HEIGHT_MAX;
+					ox0 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (PRECISE_HEIGHT_MAX - y0) + x0);
+				}
+
+				// WIP: can make these conditional based on prior checks
+				if (ox1 < 0) {
+					ox1 = 0;
+					oy1 = Math.round(((y1 - y0) / (float) (x1 - x0)) * (0 - x0) + y0);
+				} else if (ox1 > PRECISE_WIDTH_MAX) {
+					ox1 = PRECISE_WIDTH_MAX;
+					oy1 = Math.round(((y1 - y0) / (float) (x1 - x0)) * (PRECISE_WIDTH_MAX - x0) + y0);
+				}
+
+				if (oy1 < 0) {
+					oy1 = 0;
+					ox1 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (0 - y0) + x0);
+				} else if (oy1 > PRECISE_HEIGHT_MAX) {
+					oy1 = PRECISE_HEIGHT_MAX;
+					ox1 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (PRECISE_HEIGHT_MAX - y0) + x0);
+				}
+
+				if (!(ox0 < 0 && ox1 < 0) && !(ox0 > PRECISE_WIDTH_MAX && ox1 > PRECISE_WIDTH_MAX)) {
+					lx0 = ox0;
+					lx1 = ox1;
+					ly0 = oy0;
+					ly1 = oy1;
+					return true;
+				} else {
+					return false;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	private void populateLeftEventsB(int a) {
+		if (clipLine(a)) {
+			plotEvents(0);
+		}
+	}
+
+	/** Bresenham's algo. */
+	private void plotEvents(final int offset) {
+		final int x0 = (lx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		final int y0 = (ly0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		final int x1 = (lx1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		final int y1 = (ly1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		final int round = offset == 0 ? 0 : SCANT_PRECISE_PIXEL_CENTER;
+
+		assert y1 >= y0;
+
+		final int[] eventData = eventDataB;
+		final int dx = Math.abs(x1 - x0);
+		final int dy = y1 - y0;
+		final int sx = x0 < x1 ? PRECISE_PIXEL_SIZE : -PRECISE_PIXEL_SIZE;
+
+		int err = dx - dy;
+		int x = lx0;
+		int y = y0;
+
+		while (y <= y1) {
+			eventData[y * 2 + offset] = (x + round) >> PRECISION_BITS;
+
+			final int e2 = 2 * err;
+
+			if (e2 > -dy) {
+				err = err - dy;
+				x += sx;
+			}
+
+			if (e2 < dx) {
+				err = err + dx;
+				++y;
+			}
+		}
+	}
+
+	private void populateRightEventsB(int a) {
+		if (clipLine(a)) {
+			plotEvents(1);
+		}
+	}
+
+	//////////////////
 
 	private void populateLeftEvents2(int a, int b) {
 		final int[] vertexData = this.vertexData;
@@ -1601,6 +2082,133 @@ public abstract class AbstractRasterizer {
 			mask |= m << 56;
 		}
 
+		// WIP: remove
+		//long bMask = computeTileCoverageB();
+		//
+		//if (bMask != mask) {
+		//	System.out.println("Prior");
+		//	Util.printMask(mask);
+		//	System.out.println("New");
+		//	Util.printMask(bMask);
+		//}
+
+		return mask;
+	}
+
+	long computeTileCoverageB() {
+		final int[] data = eventDataB;
+
+		int y = tileOriginY << 1;
+		final int tx = tileOriginX;
+
+		final int baseX = tileOriginX + 7;
+
+		long mask = 0;
+
+		int leftX = data[y] - tx;
+		int rightX = baseX - data[++y];
+
+		if (leftX < 8 && rightX < 8) {
+			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+
+			if (rightX > 0) {
+				m &= (0xFF >> rightX);
+			}
+
+			mask = m;
+		}
+
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
+
+		if (leftX < 8 && rightX < 8) {
+			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+
+			if (rightX > 0) {
+				m &= (0xFF >> rightX);
+			}
+
+			mask |= m << 8;
+		}
+
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
+
+		if (leftX < 8 && rightX < 8) {
+			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+
+			if (rightX > 0) {
+				m &= (0xFF >> rightX);
+			}
+
+			mask |= m << 16;
+		}
+
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
+
+		if (leftX < 8 && rightX < 8) {
+			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+
+			if (rightX > 0) {
+				m &= (0xFF >> rightX);
+			}
+
+			mask |= m << 24;
+		}
+
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
+
+		if (leftX < 8 && rightX < 8) {
+			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+
+			if (rightX > 0) {
+				m &= (0xFF >> rightX);
+			}
+
+			mask |= m << 32;
+		}
+
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
+
+		if (leftX < 8 && rightX < 8) {
+			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+
+			if (rightX > 0) {
+				m &= (0xFF >> rightX);
+			}
+
+			mask |= m << 40;
+		}
+
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
+
+		if (leftX < 8 && rightX < 8) {
+			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+
+			if (rightX > 0) {
+				m &= (0xFF >> rightX);
+			}
+
+			mask |= m << 48;
+		}
+
+		leftX = data[++y] - tx;
+		rightX = baseX - data[++y];
+
+		if (leftX < 8 && rightX < 8) {
+			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+
+			if (rightX > 0) {
+				m &= (0xFF >> rightX);
+			}
+
+			mask |= m << 56;
+		}
+
 		return mask;
 	}
 
@@ -1809,9 +2417,49 @@ public abstract class AbstractRasterizer {
 				| (((position2 - 1) & EVENT_POSITION_MASK) << 4)
 				| (((position3 - 1) & EVENT_POSITION_MASK) << 6);
 
-		prepareEventBounds();
-		EVENT_FILLERS[eventKey].apply();
-
+		prepareEvents(eventKey);
 		return BOUNDS_IN;
+	}
+
+	void prepareEvents(int eventKey) {
+		eventY0 = minPixelY & TILE_AXIS_MASK;
+		eventLimit = ((maxTileOriginY + 7) << 1);
+		EVENT_FILLERS[eventKey].apply();
+		final int y0 = minPixelY << 1;
+		System.arraycopy(CLOSED_EVENT_DATA, 0, eventDataB, 0, EVENT_DATA_LENGTH);
+		System.arraycopy(OPEN_EVENT_DATA, y0, eventDataB, y0, (maxPixelY - minPixelY + 1) << 1);
+		EVENT_FILLERS_B[eventKey].apply();
+
+		boolean diff = false;
+
+		for (int y = minPixelY; y <= maxPixelY; ++y) {
+			final int j = y << 1;
+			final int k = j + 1;
+
+			if (eventData[j] != eventDataB[j] || eventData[k] != eventDataB[k]) {
+				diff = true;
+				break;
+			}
+		}
+
+		if (diff) {
+			for (int y = minPixelY; y <= maxPixelY; ++y) {
+				final int j = y << 1;
+				final int k = j + 1;
+				//final boolean leftMatch = eventData[j] == eventDataB[j];
+				//final boolean rightMatch = eventData[k] == eventDataB[k];
+				final boolean leftMatch = Math.abs(eventData[j] - eventDataB[j]) <= 1;
+				final boolean rightMatch = Math.abs(eventData[k] - eventDataB[k]) <= 1;
+				String match = leftMatch
+						? rightMatch ? "" : "R"
+						: rightMatch ? "L" : "LR";
+
+				System.out.println(String.format("%d left: %d vs %d   right: %d vs %d   %s",
+						y, eventData[j], eventDataB[j], eventData[k], eventDataB[k], match));
+			}
+
+			System.out.println();
+			EVENT_FILLERS_B[eventKey].apply();
+		}
 	}
 }

@@ -317,9 +317,7 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 				| (((position2 - 1) & EVENT_POSITION_MASK) << 4)
 				| (((position3 - 1) & EVENT_POSITION_MASK) << 6);
 
-		prepareEventBounds();
-		EVENT_FILLERS[eventKey].apply();
-
+		prepareEvents(eventKey);
 		return BOUNDS_IN;
 	}
 
@@ -488,9 +486,7 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 				| (((position2 - 1) & EVENT_POSITION_MASK) << 4)
 				| (((position3 - 1) & EVENT_POSITION_MASK) << 6);
 
-		prepareEventBounds();
-		EVENT_FILLERS[eventKey].apply();
-
+		prepareEvents(eventKey);
 		return BOUNDS_IN;
 	}
 
@@ -648,9 +644,7 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 				| (((position2 - 1) & EVENT_POSITION_MASK) << 4)
 				| (((position3 - 1) & EVENT_POSITION_MASK) << 6);
 
-		prepareEventBounds();
-		EVENT_FILLERS[eventKey].apply();
-
+		prepareEvents(eventKey);
 		return BOUNDS_IN;
 	}
 
@@ -794,9 +788,7 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 				| (((position2 - 1) & EVENT_POSITION_MASK) << 4)
 				| (((position3 - 1) & EVENT_POSITION_MASK) << 6);
 
-		prepareEventBounds();
-		EVENT_FILLERS[eventKey].apply();
-
+		prepareEvents(eventKey);
 		return BOUNDS_IN;
 	}
 }
