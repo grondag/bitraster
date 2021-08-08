@@ -125,15 +125,13 @@ import static grondag.bitraster.Constants.IDX_DY1;
 import static grondag.bitraster.Constants.MAX_PIXEL_Y;
 import static grondag.bitraster.Constants.PIXEL_HEIGHT;
 import static grondag.bitraster.Constants.PIXEL_WIDTH;
+import static grondag.bitraster.Constants.PRECISE_CLIP_MAX;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT_CLAMP;
-import static grondag.bitraster.Constants.PRECISE_INTEGER_MASK;
-import static grondag.bitraster.Constants.PRECISE_MAX_PIXEL_X;
-import static grondag.bitraster.Constants.PRECISE_MAX_PIXEL_Y;
 import static grondag.bitraster.Constants.PRECISE_PIXEL_CENTER;
-import static grondag.bitraster.Constants.PRECISE_PIXEL_SIZE;
 import static grondag.bitraster.Constants.PRECISE_WIDTH;
 import static grondag.bitraster.Constants.PRECISE_WIDTH_CLAMP;
+import static grondag.bitraster.Constants.PRECISE_WIDTH_MAX;
 import static grondag.bitraster.Constants.PRECISION_BITS;
 import static grondag.bitraster.Constants.PV_PX;
 import static grondag.bitraster.Constants.PV_PY;
@@ -1327,11 +1325,11 @@ public abstract class AbstractRasterizer {
 			y1 = swapY;
 		}
 
-		if (y1 < PRECISE_PIXEL_CENTER || y0 > PRECISE_MAX_PIXEL_Y) {
+		if (y1 <= 0 || y0 >= PRECISE_CLIP_MAX) {
 			return false;
 		}
 
-		if ((x0 < PRECISE_PIXEL_CENTER && x1 < PRECISE_PIXEL_CENTER) || (x0 > PRECISE_MAX_PIXEL_X && x1 > PRECISE_MAX_PIXEL_X)) {
+		if ((x0 < 0 && x1 < 0) || (x0 > PRECISE_WIDTH_MAX && x1 > PRECISE_WIDTH_MAX)) {
 			return false;
 		}
 
@@ -1340,27 +1338,26 @@ public abstract class AbstractRasterizer {
 		int oy0 = y0;
 		int oy1 = y1;
 
-		if (oy0 < PRECISE_PIXEL_CENTER) {
-			oy0 = PRECISE_PIXEL_CENTER;
+		if (oy0 < 0) {
+			oy0 = 0;
+			ox0 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (oy0 - y0) + x0);
 		} else {
-			assert oy0 <= PRECISE_MAX_PIXEL_Y : "low Y shold not be above max";
-			oy0 = ((oy0 + SCANT_PRECISE_PIXEL_CENTER) & PRECISE_INTEGER_MASK) + PRECISE_PIXEL_CENTER;
+			assert oy0 < PRECISE_CLIP_MAX : "low Y shold not be above max";
 		}
 
-		ox0 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (oy0 - y0) + x0);
 
-		if (oy1 > PRECISE_MAX_PIXEL_Y) {
-			oy1 = PRECISE_MAX_PIXEL_Y;
+		if (oy1 > PRECISE_CLIP_MAX) {
+			oy1 = PRECISE_CLIP_MAX;
+			ox1 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (oy1 - y0) + x0);
 		} else {
-			assert oy1 >= PRECISE_PIXEL_CENTER : "high Y shold not be below min";
-			oy1 = ((oy1 + SCANT_PRECISE_PIXEL_CENTER) & PRECISE_INTEGER_MASK) + PRECISE_PIXEL_CENTER;
+			assert oy1 > 0 : "high Y shold not be below min";
 		}
 
-		ox1 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (oy1 - y0) + x0);
-
-		if ((ox0 < PRECISE_PIXEL_CENTER && ox1 < PRECISE_MAX_PIXEL_Y) || (ox0 > PRECISE_MAX_PIXEL_X && ox1 > PRECISE_MAX_PIXEL_X)) {
+		if ((ox0 < 0 && ox1 < 0) || (ox0 > PRECISE_WIDTH_MAX && ox1 > PRECISE_WIDTH_MAX)) {
 			return false;
 		}
+
+		assert oy1 > oy0;
 
 		lx0 = ox0;
 		lx1 = ox1;
@@ -1370,212 +1367,110 @@ public abstract class AbstractRasterizer {
 	}
 
 	private void populateLeftEventsB(int a) {
-		final int[] vertexData = this.vertexData;
-		final int ax0 = vertexData[a];
-		final int ay0 = vertexData[a + 1];
-		final int ax1 = vertexData[a + 2];
-		final int ay1 = vertexData[a + 3];
-
-		final int[] eventData = eventDataB;
-		int y0 = ((ay0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
-		int y1 = ((ay1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
-
-		if (y0 > y1) {
-			final int swap = y0;
-			y0 = y1;
-			y1 = swap;
-		}
-
-		if (y0 < 0) {
-			y0 = 0;
-		} else if (y0 > MAX_PIXEL_Y) {
-			return;
-		}
-
-		if (y1 > MAX_PIXEL_Y) {
-			y1 = MAX_PIXEL_Y;
-		} else if (y1 < 0) {
-			return;
-		}
-
-		final int limit = y1 << 1;
-		final int dx = ax1 - ax0;
-
-		if (dx == 0) {
-			final int x = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
-
-			for (int y = (y0 << 1); y <= limit; y += 2) {
-				eventData[y] = x;
-			}
-		} else {
-			final int dy = ay1 - ay0;
-			final long n = (((long) dx) << 16) / dy;
-			long nStep = n << PRECISION_BITS;
-			long x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x100000L;
-			int y = (y0 << 1);
-
-			eventData[y] = Math.max(eventData[y], (int) (x >> 20));
-			x += nStep;
-			y += 2;
-
-			while (y < limit) {
-				eventData[y] = (int) (x >> 20);
-				x += nStep;
-				y += 2;
-			}
-
-			if (y == limit) {
-				eventData[y] = Math.max(eventData[y], (int) (x >> 20));
-			}
+		if (clipLine(a)) {
+			plotEventsLeft();
 		}
 	}
 
 	/** Bresenham's algo. */
 	private void plotEventsLeft() {
-		final int y0 = (ly0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-		final int y1 = (ly1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-
-		assert y1 >= y0;
+		final int y0 = ly0;
+		final int y1 = ly1;
+		final int x1 = lx1;
 
 		final int[] eventData = eventDataB;
+		final int dx = Math.abs(lx1 - lx0);
+		final int dy = ly1 - ly0;
+		final int sx = lx0 < lx1 ? 1 : -1;
 
-		if (y0 == y1) {
-			eventData[y0 * 2] = (Math.min(lx0, lx1) + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-		} else {
-			final int dx = Math.abs(lx1 - lx0);
-			final int dy = ly1 - ly0;
-			final int sx = lx0 < lx1 ? PRECISE_PIXEL_SIZE : -PRECISE_PIXEL_SIZE;
+		int yIndex = ((y0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) * 2;
+		int err = dx - dy;
+		int x = lx0;
+		int y = y0;
+		int minX = Integer.MAX_VALUE;
 
-			int err = dx - dy;
-			int x = lx0;
-			int y = y0;
-
-			boolean didPutThisY = false;
-
-			while (y <= y1) {
-				if (!didPutThisY) {
-					eventData[y * 2] = (x + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-					didPutThisY = true;
-				}
-
-				final int e2 = 2 * err;
-
-				if (e2 > -dy) {
-					err = err - dy;
-					x += sx;
-				}
-
-				if (e2 < dx) {
-					err = err + dx;
-					++y;
-					didPutThisY = false;
-				} else if (y == y1 && didPutThisY) {
-					break;
-				}
+		while (true) {
+			if ((y & 0xF) == PRECISE_PIXEL_CENTER) {
+				minX = x < minX ? x : minX;
+			} else if (minX != Integer.MAX_VALUE) {
+				eventData[yIndex] = (minX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+				minX = Integer.MAX_VALUE;
+				yIndex += 2;
 			}
+
+			if (x == x1 && y == y1) {
+				break;
+			}
+
+			final int e2 = 2 * err;
+
+			if (e2 > -dy) {
+				err = err - dy;
+				x += sx;
+			}
+
+			if (e2 < dx) {
+				err = err + dx;
+				++y;
+			}
+		}
+
+		if (minX != Integer.MAX_VALUE) {
+			eventData[yIndex] = (minX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
 		}
 	}
 
 	private void plotEventsRight() {
-		final int y0 = (ly0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-		final int y1 = (ly1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-
-		assert y1 >= y0;
-
+		final int y0 = ly0;
+		final int y1 = ly1;
+		final int x1 = lx1;
 		final int[] eventData = eventDataB;
+		final int dx = Math.abs(lx1 - lx0);
+		final int dy = ly1 - ly0;
+		final int sx = lx0 < lx1 ? 1 : -1;
 
-		if (y0 == y1) {
-			eventData[y0 * 2 + 1] = (Math.max(lx0, lx1) + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-		} else {
-			final int dx = Math.abs(lx1 - lx0);
-			final int dy = ly1 - ly0;
-			final int sx = lx0 < lx1 ? PRECISE_PIXEL_SIZE : -PRECISE_PIXEL_SIZE;
+		assert y1 > y0;
 
-			int err = dx - dy;
-			int x = lx0;
-			int y = y0;
+		int yIndex = ((y0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) * 2 + 1;
+		int err = dx - dy;
+		int x = lx0;
+		int y = y0;
+		int maxX = Integer.MIN_VALUE;
 
-			while (y <= y1) {
-				eventData[y * 2 + 1] = (x + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-
-				final int e2 = 2 * err;
-
-				if (e2 > -dy) {
-					err = err - dy;
-					x += sx;
-				}
-
-				if (e2 < dx) {
-					err = err + dx;
-					++y;
-				}
+		while (true) {
+			if ((y & 0xF) == PRECISE_PIXEL_CENTER) {
+				maxX = x > maxX ? x : maxX;
+			} else if (maxX != Integer.MIN_VALUE) {
+				eventData[yIndex] = (maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+				maxX = Integer.MIN_VALUE;
+				yIndex += 2;
 			}
+
+			if (x == x1 && y == y1) {
+				break;
+			}
+
+			final int e2 = 2 * err;
+
+			if (e2 > -dy) {
+				err = err - dy;
+				x += sx;
+			}
+
+			if (e2 < dx) {
+				err = err + dx;
+				++y;
+			}
+		}
+
+		if (maxX != Integer.MIN_VALUE) {
+			eventData[yIndex] = (maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
 		}
 	}
 
 	private void populateRightEventsB(int a) {
-		final int[] vertexData = this.vertexData;
-
-		final int ax0 = vertexData[a];
-		final int ay0 = vertexData[a + 1];
-		final int ax1 = vertexData[a + 2];
-		final int ay1 = vertexData[a + 3];
-
-		final int[] eventData = eventDataB;
-		int y0 = ((ay0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
-		int y1 = ((ay1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
-
-		if (y0 > y1) {
-			final int swap = y0;
-			y0 = y1;
-			y1 = swap;
-		}
-
-		if (y0 < 0) {
-			y0 = 0;
-		} else if (y0 > MAX_PIXEL_Y) {
-			return;
-		}
-
-		if (y1 > MAX_PIXEL_Y) {
-			y1 = MAX_PIXEL_Y;
-		} else if (y1 < 0) {
-			return;
-		}
-
-		// difference from left: is high index in pairs
-		final int limit = (y1 << 1) + 1;
-		final int dx = ax1 - ax0;
-
-		if (dx == 0) {
-			final int x = (ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-
-			// difference from left: is high index in pairs
-			for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
-				eventData[y] = x;
-			}
-		} else {
-			final int dy = ay1 - ay0;
-			final long n = (((long) dx) << 16) / dy;
-			final long nStep = n << PRECISION_BITS;
-			// difference from left: rounding looses tie
-			long x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x7FFFFL;
-
-			// difference from left: is high index in pairs
-			int y = (y0 << 1) + 1;
-			eventData[y] = Math.min(eventData[y], (int) (x >> 20));
-			x += nStep;
-			y += 2;
-
-			while (y < limit) {
-				eventData[y] = (int) (x >> 20);
-				x += nStep;
-				y += 2;
-			}
-
-			if (y == limit) {
-				eventData[y] = Math.min(eventData[y], (int) (x >> 20));
-			}
+		if (clipLine(a)) {
+			plotEventsRight();
 		}
 	}
 
@@ -2242,8 +2137,8 @@ public abstract class AbstractRasterizer {
 	}
 
 	long computeTileCoverage() {
-		//return computeTileCoverageNew();
-		return computeTileCoverageOld();
+		return computeTileCoverageNew();
+		//return computeTileCoverageOld();
 	}
 
 	long computeTileCoverageNew() {
@@ -2569,9 +2464,9 @@ public abstract class AbstractRasterizer {
 	}
 
 	void prepareEvents(int eventKey) {
-		//prepareEventsNew(eventKey);
-		prepareEventsOld(eventKey);
-
+		prepareEventsNew(eventKey);
+		//prepareEventsOld(eventKey);
+		//
 		//
 		//boolean diff = false;
 		//
@@ -2608,7 +2503,7 @@ public abstract class AbstractRasterizer {
 	void prepareEventsNew(int eventKey) {
 		final int y0 = minPixelY << 1;
 		System.arraycopy(CLOSED_EVENT_DATA, 0, eventDataB, 0, EVENT_DATA_LENGTH);
-		System.arraycopy(OPEN_EVENT_DATA, y0, eventDataB, y0, (maxPixelY - minPixelY + 1) << 1);
+		System.arraycopy(OPEN_EVENT_DATA, y0, eventDataB, y0, (maxPixelY - minPixelY) << 1);
 		EVENT_FILLERS_B[eventKey].apply();
 	}
 
