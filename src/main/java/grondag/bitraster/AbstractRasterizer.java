@@ -129,6 +129,7 @@ import static grondag.bitraster.Constants.PRECISE_CLIP_MAX;
 import static grondag.bitraster.Constants.PRECISE_FRACTION_MASK;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT_CLAMP;
+import static grondag.bitraster.Constants.PRECISE_INTEGER_MASK;
 import static grondag.bitraster.Constants.PRECISE_PIXEL_CENTER;
 import static grondag.bitraster.Constants.PRECISE_WIDTH;
 import static grondag.bitraster.Constants.PRECISE_WIDTH_CLAMP;
@@ -1339,18 +1340,20 @@ public abstract class AbstractRasterizer {
 		int ox1 = x1;
 		int oy0 = y0;
 		int oy1 = y1;
+		float slope = Float.NaN;
 
 		if (oy0 < 0) {
 			oy0 = PRECISE_PIXEL_CENTER;
-			ox0 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (oy0 - y0) + x0);
+			slope = (x1 - x0) / (float) (y1 - y0);
+			ox0 = Math.round(slope * (oy0 - y0) + x0);
 		} else {
 			assert oy0 < PRECISE_CLIP_MAX : "low Y shold not be above max";
 		}
 
-
 		if (oy1 > PRECISE_CLIP_MAX) {
 			oy1 = PRECISE_CLIP_MAX;
-			ox1 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (oy1 - y0) + x0);
+			if (Float.isNaN(slope)) slope = (x1 - x0) / (float) (y1 - y0);
+			ox1 = Math.round(slope * (oy1 - y0) + x0);
 		} else {
 			assert oy1 > 0 : "high Y shold not be below min";
 		}
@@ -1362,95 +1365,25 @@ public abstract class AbstractRasterizer {
 
 		assert oy1 > oy0;
 
-		final int dx = Math.abs(ox1 - ox0);
-		final int dy = Math.abs(oy1 - oy0);
-		final int dx2 = dx * 2;
-		final int dy2 = dy * 2;
-		final int sx = ox0 < ox1 ? 1 : -1;
-		final int sy = oy0 < oy1 ? 1 : -1;
-
 		// snap lower y to pixel
-
-		if ((oy0 & PRECISE_FRACTION_MASK) == PRECISE_PIXEL_CENTER) {
-			ly0 = oy0 >> PRECISION_BITS;
-			lx0 = (ox0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-		} else {
-			// walk to y pixel center using bresenham
-			int err = dx2 - dy2;
-			int cx = ox0;
-			int cy = oy0;
-
-			while (true) {
-				if (err > -dy) {
-					err -= dy2;
-					cx += sx;
-				}
-
-				if (err < dx) {
-					err += dx2;
-
-					if (left) {
-						// on left we break as soon as y is reached
-						cy += sy;
-
-						if ((cy & PRECISE_FRACTION_MASK) == PRECISE_PIXEL_CENTER) {
-							break;
-						}
-					} else {
-						// on right, we wait for x to fully increment
-						if ((cy & PRECISE_FRACTION_MASK) == PRECISE_PIXEL_CENTER) {
-							break;
-						}
-
-						cy += sy;
-					}
-				}
-			}
-
-			ly0 = cy >> PRECISION_BITS;
-			lx0 = (cx + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		if ((oy0 & PRECISE_FRACTION_MASK) != PRECISE_PIXEL_CENTER) {
+			oy0 = (oy0 & PRECISE_INTEGER_MASK) | PRECISE_PIXEL_CENTER;
+			if (Float.isNaN(slope)) slope = (x1 - x0) / (float) (y1 - y0);
+			ox0 = Math.round(slope * (oy0 - y0) + x0);
 		}
+
+		ly0 = oy0 >> PRECISION_BITS;
+		lx0 = (ox0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
 
 		// snap upper y to pixel
-		if ((oy1 & PRECISE_FRACTION_MASK) == PRECISE_PIXEL_CENTER) {
-			ly1 = oy1 >> PRECISION_BITS;
-			lx1 = (ox1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-		} else {
-			// walk to y pixel center using bresenham
-			int err = dx2 - dy2;
-			int cx = ox1;
-			int cy = oy1;
-
-			while (true) {
-				if (err > -1 * dy) {
-					err -= dy2;
-					cx -= sx;
-				}
-
-				if (err < dx) {
-					err += dx2;
-
-					if (left) {
-						// on left, we wait for x to fully increment
-						if ((cy & PRECISE_FRACTION_MASK) == PRECISE_PIXEL_CENTER) {
-							break;
-						}
-
-						cy -= sy;
-					} else {
-						// on right we break as soon as y is reached
-						cy -= sy;
-
-						if ((cy & PRECISE_FRACTION_MASK) == PRECISE_PIXEL_CENTER) {
-							break;
-						}
-					}
-				}
-			}
-
-			ly1 = cy >> PRECISION_BITS;
-			lx1 = (cx + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		if ((oy1 & PRECISE_FRACTION_MASK) != PRECISE_PIXEL_CENTER) {
+			oy1 = ((oy1 + SCANT_PRECISE_PIXEL_CENTER) & PRECISE_INTEGER_MASK) | PRECISE_PIXEL_CENTER;
+			if (Float.isNaN(slope)) slope = (x1 - x0) / (float) (y1 - y0);
+			ox1 = Math.round(slope * (oy1 - y0) + x0);
 		}
+
+		ly1 = oy1 >> PRECISION_BITS;
+		lx1 = (ox1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
 
 		return ly0 <= ly1;
 	}
