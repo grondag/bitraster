@@ -130,7 +130,6 @@ import static grondag.bitraster.Constants.PRECISE_HEIGHT;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT_CLAMP;
 import static grondag.bitraster.Constants.PRECISE_INTEGER_MASK;
 import static grondag.bitraster.Constants.PRECISE_PIXEL_CENTER;
-import static grondag.bitraster.Constants.PRECISE_PIXEL_SIZE;
 import static grondag.bitraster.Constants.PRECISE_WIDTH;
 import static grondag.bitraster.Constants.PRECISE_WIDTH_CLAMP;
 import static grondag.bitraster.Constants.PRECISION_BITS;
@@ -1316,39 +1315,89 @@ public abstract class AbstractRasterizer {
 
 		final int yStart = y1_low < PRECISE_PIXEL_CENTER ? PRECISE_PIXEL_CENTER : (((y1_low + SCANT_PRECISE_PIXEL_CENTER) & PRECISE_INTEGER_MASK) | PRECISE_PIXEL_CENTER);
 		final int yEnd = y0_high > PRECISE_CLIP_MAX ? PRECISE_CLIP_MAX : (((y0_high + SCANT_PRECISE_PIXEL_CENTER) & PRECISE_INTEGER_MASK) | PRECISE_PIXEL_CENTER);
-		final int a = y0_high - y1_low;
-		final int b = x1 - x0;
-		final int bStep = b * PRECISE_PIXEL_SIZE;
-		final long c = x0 * y1_low - y0_high * x1;
-		final int[] events = eventDataB;
+		// Will always be positive in left
+		final long a = y0_high - y1_low;
+		final long a2 = a * 2;
+		final long b = x1 - x0;
+		final long c = (long) x0 * y1_low - (long) y0_high * x1;
 
-		int yIndex = (yStart >> PRECISION_BITS) * 2;
-		int yEndIndex = (yEnd >> PRECISION_BITS) * 2;
-		int x = x1;
-		long w = a * x + b * yStart + c;
+		final int py0 = yStart >> PRECISION_BITS;
+		final int py1 = yEnd >> PRECISION_BITS;
 
-		if (Math.abs(w) > a * 8) {
-			final long dx = w / a;
-			x -= (int) dx;
-			w -= a * dx;
+		int xStart = x1;
+		final long wStart = a * xStart + b * yStart + c;
+
+		// avoid division when close
+		if (wStart >= a && wStart < a2) {
+			--xStart;
+			assert Math.abs(a * xStart + b * yStart + c) < a;
+		} else if (wStart < 0 && wStart >= -a) {
+			++xStart;
+			assert Math.abs(a * xStart + b * yStart + c) < a;
+		} else {
+			xStart -= ((int) (wStart / a));
+			assert Math.abs(a * xStart + b * yStart + c) < a;
 		}
 
-		while (yIndex <= yEndIndex) {
-			if (w >= a) {
-				do {
-					w -= a;
-					--x;
-				} while (w >= a);
-			} else if (w < 0) {
-				do {
-					w += a;
-					++x;
-				} while (w < 0);
+
+		final int px0 = (xStart + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		final int[] events = eventDataB;
+
+		events[py0 << 1] = px0;
+
+		if (py0 == py1) {
+			return;
+		}
+
+		int xEnd = x0;
+		final long wEnd = a * xEnd + b * yEnd + c;
+
+		if (wEnd >= a && wEnd < a2) {
+			--xEnd;
+			assert Math.abs(a * xEnd + b * yEnd + c) < a;
+		} else if (wEnd < 0 && wEnd >= -a) {
+			++xEnd;
+			assert Math.abs(a * xEnd + b * yEnd + c) < a;
+		} else {
+			xEnd -= ((int) (wEnd / a));
+			assert Math.abs(a * xEnd + b * yEnd + c) < a;
+		}
+
+
+		final int px1 = (xEnd + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		final int dy = py1 - py0;
+
+		if (dy == 1) {
+			events[py1 << 1] = px1;
+			return;
+		}
+
+		// Bresenham's after end points are clamped
+		final int dx = Math.abs(px1 - px0);
+		final int dx2 = dx * 2;
+		final int dy2 = dy * 2;
+		final int sx = px0 < px1 ? 1 : -1;
+
+		int err = dx2 - dy2;
+		int x = px0;
+		int y = py0;
+
+		while (true) {
+			if (err > -dy) {
+				err -= dy2;
+				x += sx;
 			}
 
-			events[yIndex] = (x + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-			yIndex += 2;
-			w += bStep;
+			if (err < dx) {
+				err += dx2;
+				++y;
+
+				events[y << 1] = x;
+
+				if (y == py1) {
+					break;
+				}
+			}
 		}
 	}
 
@@ -1367,41 +1416,111 @@ public abstract class AbstractRasterizer {
 
 		final int yStart = y0_low < PRECISE_PIXEL_CENTER ? PRECISE_PIXEL_CENTER : (((y0_low + SCANT_PRECISE_PIXEL_CENTER) & PRECISE_INTEGER_MASK) | PRECISE_PIXEL_CENTER);
 		final int yEnd = y1_high > PRECISE_CLIP_MAX ? PRECISE_CLIP_MAX : (((y1_high + SCANT_PRECISE_PIXEL_CENTER) & PRECISE_INTEGER_MASK) | PRECISE_PIXEL_CENTER);
-		// a will always be negative
-		final int a = y0_low - y1_high;
-		final int b = x1 - x0;
-		final int bStep = b * PRECISE_PIXEL_SIZE;
-		final long c = x0 * y1_high - y0_low * x1;
-		final int[] events = eventDataB;
+		// a will always be negative in right
+		final long a = y0_low - y1_high;
+		final long a2 = a * 2;
+		final long b = x1 - x0;
+		final long c = (long) x0 * y1_high - (long) y0_low * x1;
 
-		int yIndex = (yStart >> PRECISION_BITS) * 2 + 1;
-		int yEndIndex = (yEnd >> PRECISION_BITS) * 2 + 1;
-		int x = x0;
-		long w = a * x + b * yStart + c;
+		final int py0 = yStart >> PRECISION_BITS;
+		final int py1 = yEnd >> PRECISION_BITS;
 
-		if (Math.abs(w) > a * -8) {
-			final long dx = w / a;
-			x -= (int) dx;
-			w -= a * dx;
-		}
+		int xStart = x1;
+		long w = a * xStart + b * yStart + c;
 
-		// diff from left is can't be on line
-		while (yIndex <= yEndIndex) {
-			if (w > -a) {
-				do {
-					w += a;
-					++x;
-				} while (w > -a);
-			} else if (w <= 0) {
-				do {
-					w -= a;
-					--x;
-				} while (w <= 0);
+		// Fill rule: right side cannot be on line
+		// avoid division when close
+		if (w > -a && w <= 0) {
+			++xStart;
+			assert Math.abs(a * xStart + b * yStart + c) > 0;
+			assert Math.abs(a * xStart + b * yStart + c) <= -a;
+		} else if (w <= 0 && w > a) {
+			--xStart;
+			assert Math.abs(a * xStart + b * yStart + c) > 0;
+			assert Math.abs(a * xStart + b * yStart + c) <= -a;
+		} else {
+			final int wdx = ((int) (w / a));
+			xStart -= wdx;
+			w -= wdx * a;
+
+			if (w == 0) {
+				// bump left to enforce fill rule
+				--xStart;
 			}
 
-			events[yIndex] = (x + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-			yIndex += 2;
-			w += bStep;
+			assert Math.abs(a * xStart + b * yStart + c) > 0;
+			assert Math.abs(a * xStart + b * yStart + c) <= -a;
+		}
+
+		final int px0 = (xStart + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		final int[] events = eventDataB;
+
+		events[py0 * 2 + 1] = px0;
+
+		if (py0 == py1) {
+			return;
+		}
+
+		int xEnd = x0;
+		w = a * xEnd + b * yEnd + c;
+
+		if (w > -a && w <= -a2) {
+			++xEnd;
+			assert Math.abs(a * xEnd + b * yEnd + c) > 0;
+			assert Math.abs(a * xEnd + b * yEnd + c) <= -a;
+		} else if (w <= 0 && w > a) {
+			--xEnd;
+			assert Math.abs(a * xEnd + b * yEnd + c) > 0;
+			assert Math.abs(a * xEnd + b * yEnd + c) <= -a;
+		} else {
+			final int wdx = ((int) (w / a));
+			xEnd -= wdx;
+			w -= wdx * a;
+
+			if (w == 0) {
+				// bump left to enforce fill rule
+				--xEnd;
+			}
+
+			assert Math.abs(a * xEnd + b * yEnd + c) > 0;
+			assert Math.abs(a * xEnd + b * yEnd + c) <= -a;
+		}
+
+
+		final int px1 = (xEnd + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		final int dy = py1 - py0;
+
+		if (dy == 1) {
+			events[py1 * 2 + 1] = px1;
+			return;
+		}
+
+		// Bresenham's after end points are clamped
+		final int dx = Math.abs(px1 - px0);
+		final int dx2 = dx * 2;
+		final int dy2 = dy * 2;
+		final int sx = px0 < px1 ? 1 : -1;
+
+		int err = dx2 - dy2;
+		int x = px1;
+		int y = py1;
+
+		while (true) {
+			if (err > -dy) {
+				err -= dy2;
+				x -= sx;
+			}
+
+			if (err < dx) {
+				err += dx2;
+				--y;
+
+				events[y * 2 + 1] = x;
+
+				if (y == py0) {
+					break;
+				}
+			}
 		}
 	}
 
@@ -2400,38 +2519,38 @@ public abstract class AbstractRasterizer {
 
 	void prepareEvents(int eventKey) {
 		prepareEventsNew(eventKey);
-//		prepareEventsOld(eventKey);
-//
-//		boolean diff = false;
-//
-//		for (int y = minPixelY; y <= maxPixelY; ++y) {
-//			final int j = y << 1;
-//			final int k = j + 1;
-//
-//			if (clamp(eventData[j]) != clamp(eventDataB[j])
-//					|| clamp(eventData[k]) != clamp(eventDataB[k])) {
-//				diff = true;
-//				break;
-//			}
-//		}
-//
-//		if (diff) {
-//			for (int y = minPixelY; y <= maxPixelY; ++y) {
-//				final int j = y << 1;
-//				final int k = j + 1;
-//				final boolean leftMatch = clamp(eventData[j]) == clamp(eventDataB[j]);
-//				final boolean rightMatch = clamp(eventData[k]) ==  clamp(eventDataB[k]);
-//				String match = leftMatch
-//						? rightMatch ? "" : "R"
-//						: rightMatch ? "L" : "LR";
-//
-//				System.out.println(String.format("%d left: %d vs %d   right: %d vs %d   %s",
-//						y, eventData[j], eventDataB[j], eventData[k], eventDataB[k], match));
-//			}
-//
-//			System.out.println();
-//			prepareEventsNew(eventKey);
-//		}
+		//prepareEventsOld(eventKey);
+		//
+		//boolean diff = false;
+		//
+		//for (int y = minPixelY; y <= maxPixelY; ++y) {
+		//	final int j = y << 1;
+		//	final int k = j + 1;
+		//
+		//	if (clamp(eventData[j]) != clamp(eventDataB[j])
+		//			|| clamp(eventData[k]) != clamp(eventDataB[k])) {
+		//		diff = true;
+		//		break;
+		//	}
+		//}
+		//
+		//if (diff) {
+		//	for (int y = minPixelY; y <= maxPixelY; ++y) {
+		//		final int j = y << 1;
+		//		final int k = j + 1;
+		//		final boolean leftMatch = clamp(eventData[j]) == clamp(eventDataB[j]);
+		//		final boolean rightMatch = clamp(eventData[k]) ==  clamp(eventDataB[k]);
+		//		String match = leftMatch
+		//				? rightMatch ? "" : "R"
+		//				: rightMatch ? "L" : "LR";
+		//
+		//		System.out.println(String.format("%d left: %d vs %d   right: %d vs %d   %s",
+		//				y, eventData[j], eventDataB[j], eventData[k], eventDataB[k], match));
+		//	}
+		//
+		//	System.out.println();
+		//	prepareEventsNew(eventKey);
+		//}
 	}
 
 	void prepareEventsNew(int eventKey) {
