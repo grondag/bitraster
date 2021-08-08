@@ -126,12 +126,12 @@ import static grondag.bitraster.Constants.MAX_PIXEL_Y;
 import static grondag.bitraster.Constants.PIXEL_HEIGHT;
 import static grondag.bitraster.Constants.PIXEL_WIDTH;
 import static grondag.bitraster.Constants.PRECISE_CLIP_MAX;
+import static grondag.bitraster.Constants.PRECISE_FRACTION_MASK;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT;
 import static grondag.bitraster.Constants.PRECISE_HEIGHT_CLAMP;
 import static grondag.bitraster.Constants.PRECISE_PIXEL_CENTER;
 import static grondag.bitraster.Constants.PRECISE_WIDTH;
 import static grondag.bitraster.Constants.PRECISE_WIDTH_CLAMP;
-import static grondag.bitraster.Constants.PRECISE_WIDTH_MAX;
 import static grondag.bitraster.Constants.PRECISION_BITS;
 import static grondag.bitraster.Constants.PV_PX;
 import static grondag.bitraster.Constants.PV_PY;
@@ -1301,7 +1301,7 @@ public abstract class AbstractRasterizer {
 
 	protected int lx0, lx1, ly0, ly1;
 	/**
-	 * Based on "Another Simple but Faster Method for 2D Line Clipping".
+	 * Based loosely on "Another Simple but Faster Method for 2D Line Clipping".
 	 * Dimitrios Matthes and Vasileios Drakopoulos
 	 * International Journal of Computer Graphics & Animation (IJCGA) Vol.9, No.1/2/3, July 2019
 	 * Retrieved via https://aircconline.com/ijcga/V9N3/9319ijcga01.pdf
@@ -1309,7 +1309,7 @@ public abstract class AbstractRasterizer {
 	 * @param line
 	 * @return true if line is within clipping bounds
 	 */
-	boolean clipLine(int line) {
+	boolean clipLine(int line, boolean left) {
 		final int[] vertexData = this.vertexData;
 		int x0 = vertexData[line];
 		int y0 = vertexData[line + 1];
@@ -1329,9 +1329,11 @@ public abstract class AbstractRasterizer {
 			return false;
 		}
 
-		if ((x0 < 0 && x1 < 0) || (x0 > PRECISE_WIDTH_MAX && x1 > PRECISE_WIDTH_MAX)) {
-			return false;
-		}
+		// WIP: special case this instead
+		// causes events to not be populated
+		//if ((x0 < 0 && x1 < 0) || (x0 > PRECISE_WIDTH_MAX && x1 > PRECISE_WIDTH_MAX)) {
+		//	return false;
+		//}
 
 		int ox0 = x0;
 		int ox1 = x1;
@@ -1339,7 +1341,7 @@ public abstract class AbstractRasterizer {
 		int oy1 = y1;
 
 		if (oy0 < 0) {
-			oy0 = 0;
+			oy0 = PRECISE_PIXEL_CENTER;
 			ox0 = Math.round(((x1 - x0) / (float) (y1 - y0)) * (oy0 - y0) + x0);
 		} else {
 			assert oy0 < PRECISE_CLIP_MAX : "low Y shold not be above max";
@@ -1353,21 +1355,113 @@ public abstract class AbstractRasterizer {
 			assert oy1 > 0 : "high Y shold not be below min";
 		}
 
-		if ((ox0 < 0 && ox1 < 0) || (ox0 > PRECISE_WIDTH_MAX && ox1 > PRECISE_WIDTH_MAX)) {
-			return false;
-		}
+		// causes events to not be populated
+		//if ((ox0 < 0 && ox1 < 0) || (ox0 > PRECISE_WIDTH_MAX && ox1 > PRECISE_WIDTH_MAX)) {
+		//	return false;
+		//}
 
 		assert oy1 > oy0;
 
-		lx0 = ox0;
-		lx1 = ox1;
-		ly0 = oy0;
-		ly1 = oy1;
-		return true;
+		final int dx = Math.abs(ox1 - ox0);
+		final int dy = Math.abs(oy1 - oy0);
+		final int dx2 = dx * 2;
+		final int dy2 = dy * 2;
+		final int sx = ox0 < ox1 ? 1 : -1;
+		final int sy = oy0 < oy1 ? 1 : -1;
+
+		// snap lower y to pixel
+
+		if ((oy0 & PRECISE_FRACTION_MASK) == PRECISE_PIXEL_CENTER) {
+			ly0 = oy0 >> PRECISION_BITS;
+			lx0 = (ox0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		} else {
+			// walk to y pixel center using bresenham
+			int err = dx2 - dy2;
+			int cx = ox0;
+			int cy = oy0;
+
+			while (true) {
+				if (err > -dy) {
+					err -= dy2;
+					cx += sx;
+				}
+
+				if (err < dx) {
+					err += dx2;
+
+					if (left) {
+						// on left we break as soon as y is reached
+						cy += sy;
+
+						if ((cy & PRECISE_FRACTION_MASK) == PRECISE_PIXEL_CENTER) {
+							break;
+						}
+					} else {
+						// on right, we wait for x to fully increment
+						if ((cy & PRECISE_FRACTION_MASK) == PRECISE_PIXEL_CENTER) {
+							break;
+						}
+
+						cy += sy;
+					}
+				}
+			}
+
+			ly0 = cy >> PRECISION_BITS;
+			lx0 = (cx + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		}
+
+		// snap upper y to pixel
+		if ((oy1 & PRECISE_FRACTION_MASK) == PRECISE_PIXEL_CENTER) {
+			ly1 = oy1 >> PRECISION_BITS;
+			lx1 = (ox1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		} else {
+			// walk to y pixel center using bresenham
+			int err = dx2 - dy2;
+			int cx = ox1;
+			int cy = oy1;
+
+			while (true) {
+				if (err > -1 * dy) {
+					err -= dy2;
+					cx -= sx;
+				}
+
+				if (err < dx) {
+					err += dx2;
+
+					if (left) {
+						// on left, we wait for x to fully increment
+						if ((cy & PRECISE_FRACTION_MASK) == PRECISE_PIXEL_CENTER) {
+							break;
+						}
+
+						cy -= sy;
+					} else {
+						// on right we break as soon as y is reached
+						cy -= sy;
+
+						if ((cy & PRECISE_FRACTION_MASK) == PRECISE_PIXEL_CENTER) {
+							break;
+						}
+					}
+				}
+			}
+
+			ly1 = cy >> PRECISION_BITS;
+			lx1 = (cx + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		}
+
+		return ly0 <= ly1;
+	}
+
+	int edge(int ax, int ay, int bx, int by, int cx, int cy) {
+	    return (cx - ax) * (by - ay) - (cy - ay) * (bx - ax);
 	}
 
 	private void populateLeftEventsB(int a) {
-		if (clipLine(a)) {
+		// WIP: optimize special case when both x0 and x1 are out of bounds
+		if (clipLine(a, true)) {
 			plotEventsLeft();
 		}
 	}
@@ -1376,100 +1470,99 @@ public abstract class AbstractRasterizer {
 	private void plotEventsLeft() {
 		final int y0 = ly0;
 		final int y1 = ly1;
+		final int x0 = lx0;
 		final int x1 = lx1;
-
 		final int[] eventData = eventDataB;
-		final int dx = Math.abs(lx1 - lx0);
-		final int dy = ly1 - ly0;
-		final int sx = lx0 < lx1 ? 1 : -1;
 
-		int yIndex = ((y0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) * 2;
-		int err = dx - dy;
-		int x = lx0;
+		eventData[y0 << 1] = x0;
+
+		if (y0 == y1) {
+			return;
+		}
+
+		final int dy = y1 - y0;
+
+		if (dy == 1) {
+			eventData[y1 << 1] = x1;
+			return;
+		}
+
+		final int dx = Math.abs(x1 - x0);
+		final int dx2 = dx * 2;
+		final int dy2 = dy * 2;
+		final int sx = x0 < x1 ? 1 : -1;
+
+		int err = dx2 - dy2;
+		int x = x0;
 		int y = y0;
-		int minX = Integer.MAX_VALUE;
 
 		while (true) {
-			if ((y & 0xF) == PRECISE_PIXEL_CENTER) {
-				minX = x < minX ? x : minX;
-			} else if (minX != Integer.MAX_VALUE) {
-				eventData[yIndex] = (minX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-				minX = Integer.MAX_VALUE;
-				yIndex += 2;
-			}
-
-			if (x == x1 && y == y1) {
-				break;
-			}
-
-			final int e2 = 2 * err;
-
-			if (e2 > -dy) {
-				err = err - dy;
+			if (err > -dy) {
+				err -= dy2;
 				x += sx;
 			}
 
-			if (e2 < dx) {
-				err = err + dx;
+			if (err < dx) {
+				err += dx2;
 				++y;
-			}
-		}
+				eventData[y << 1] = x;
 
-		if (minX != Integer.MAX_VALUE) {
-			eventData[yIndex] = (minX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+				if (y == y1) {
+					break;
+				}
+			}
 		}
 	}
 
 	private void plotEventsRight() {
 		final int y0 = ly0;
 		final int y1 = ly1;
+		final int x0 = lx0;
 		final int x1 = lx1;
 		final int[] eventData = eventDataB;
-		final int dx = Math.abs(lx1 - lx0);
-		final int dy = ly1 - ly0;
-		final int sx = lx0 < lx1 ? 1 : -1;
 
-		assert y1 > y0;
+		eventData[y1 * 2 + 1] = x1;
 
-		int yIndex = ((y0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) * 2 + 1;
-		int err = dx - dy;
-		int x = lx0;
-		int y = y0;
-		int maxX = Integer.MIN_VALUE;
-
-		while (true) {
-			if ((y & 0xF) == PRECISE_PIXEL_CENTER) {
-				maxX = x > maxX ? x : maxX;
-			} else if (maxX != Integer.MIN_VALUE) {
-				eventData[yIndex] = (maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
-				maxX = Integer.MIN_VALUE;
-				yIndex += 2;
-			}
-
-			if (x == x1 && y == y1) {
-				break;
-			}
-
-			final int e2 = 2 * err;
-
-			if (e2 > -dy) {
-				err = err - dy;
-				x += sx;
-			}
-
-			if (e2 < dx) {
-				err = err + dx;
-				++y;
-			}
+		if (y0 == y1) {
+			return;
 		}
 
-		if (maxX != Integer.MIN_VALUE) {
-			eventData[yIndex] = (maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+		final int dy = y1 - y0;
+
+		if (dy == 1) {
+			eventData[y0 * 2 + 1] = x0;
+			return;
+		}
+
+		final int dx = Math.abs(x1 - x0);
+		final int dx2 = dx * 2;
+		final int dy2 = dy * 2;
+		final int sx = x0 < x1 ? 1 : -1;
+
+		int err = dx2 - dy2;
+		int x = x1;
+		int y = y1;
+
+		while (true) {
+			if (err > -dy) {
+				err -= dy2;
+				x -= sx;
+			}
+
+			if (err < dx) {
+				err += dx2;
+				--y;
+				eventData[y * 2 + 1] = x;
+
+				if (y == y0) {
+					break;
+				}
+			}
 		}
 	}
 
 	private void populateRightEventsB(int a) {
-		if (clipLine(a)) {
+		if (clipLine(a, false)) {
 			plotEventsRight();
 		}
 	}
@@ -2465,39 +2558,38 @@ public abstract class AbstractRasterizer {
 
 	void prepareEvents(int eventKey) {
 		prepareEventsNew(eventKey);
-		//prepareEventsOld(eventKey);
-		//
-		//
-		//boolean diff = false;
-		//
-		//for (int y = minPixelY; y <= maxPixelY; ++y) {
-		//	final int j = y << 1;
-		//	final int k = j + 1;
-		//
-		//	if (Math.max(0, eventData[j]) != Math.max(0, eventDataB[j])
-		//			|| Math.min(2048, eventData[k]) != Math.min(2048, eventDataB[k])) {
-		//		diff = true;
-		//		break;
-		//	}
-		//}
-		//
-		//if (diff) {
-		//	for (int y = minPixelY; y <= maxPixelY; ++y) {
-		//		final int j = y << 1;
-		//		final int k = j + 1;
-		//		final boolean leftMatch = Math.max(0, eventData[j]) == Math.max(0, eventDataB[j]);
-		//		final boolean rightMatch = Math.min(2048, eventData[k]) ==  Math.min(2048, eventDataB[k]);
-		//		String match = leftMatch
-		//				? rightMatch ? "" : "R"
-		//				: rightMatch ? "L" : "LR";
-		//
-		//		System.out.println(String.format("%d left: %d vs %d   right: %d vs %d   %s",
-		//				y, eventData[j], eventDataB[j], eventData[k], eventDataB[k], match));
-		//	}
-		//
-		//	System.out.println();
-		//	//prepareEventsNew(eventKey);
-		//}
+//		prepareEventsOld(eventKey);
+//
+//		boolean diff = false;
+//
+//		for (int y = minPixelY; y <= maxPixelY; ++y) {
+//			final int j = y << 1;
+//			final int k = j + 1;
+//
+//			if (Math.max(0, eventData[j]) != Math.max(0, eventDataB[j])
+//					|| Math.min(2048, eventData[k]) != Math.min(2048, eventDataB[k])) {
+//				diff = true;
+//				break;
+//			}
+//		}
+//
+//		if (diff) {
+//			for (int y = minPixelY; y <= maxPixelY; ++y) {
+//				final int j = y << 1;
+//				final int k = j + 1;
+//				final boolean leftMatch = Math.max(0, eventData[j]) == Math.max(0, eventDataB[j]);
+//				final boolean rightMatch = Math.min(2048, eventData[k]) ==  Math.min(2048, eventDataB[k]);
+//				String match = leftMatch
+//						? rightMatch ? "" : "R"
+//						: rightMatch ? "L" : "LR";
+//
+//				System.out.println(String.format("%d left: %d vs %d   right: %d vs %d   %s",
+//						y, eventData[j], eventDataB[j], eventData[k], eventDataB[k], match));
+//			}
+//
+//			System.out.println();
+//			prepareEventsNew(eventKey);
+//		}
 	}
 
 	void prepareEventsNew(int eventKey) {
