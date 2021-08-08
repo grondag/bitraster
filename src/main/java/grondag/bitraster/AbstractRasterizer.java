@@ -1370,8 +1370,63 @@ public abstract class AbstractRasterizer {
 	}
 
 	private void populateLeftEventsB(int a) {
-		if (clipLine(a)) {
-			plotEventsLeft();
+		final int[] vertexData = this.vertexData;
+		final int ax0 = vertexData[a];
+		final int ay0 = vertexData[a + 1];
+		final int ax1 = vertexData[a + 2];
+		final int ay1 = vertexData[a + 3];
+
+		final int[] eventData = eventDataB;
+		int y0 = ((ay0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
+		int y1 = ((ay1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
+
+		if (y0 > y1) {
+			final int swap = y0;
+			y0 = y1;
+			y1 = swap;
+		}
+
+		if (y0 < 0) {
+			y0 = 0;
+		} else if (y0 > MAX_PIXEL_Y) {
+			return;
+		}
+
+		if (y1 > MAX_PIXEL_Y) {
+			y1 = MAX_PIXEL_Y;
+		} else if (y1 < 0) {
+			return;
+		}
+
+		final int limit = y1 << 1;
+		final int dx = ax1 - ax0;
+
+		if (dx == 0) {
+			final int x = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
+
+			for (int y = (y0 << 1); y <= limit; y += 2) {
+				eventData[y] = x;
+			}
+		} else {
+			final int dy = ay1 - ay0;
+			final long n = (((long) dx) << 16) / dy;
+			long nStep = n << PRECISION_BITS;
+			long x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x100000L;
+			int y = (y0 << 1);
+
+			eventData[y] = Math.max(eventData[y], (int) (x >> 20));
+			x += nStep;
+			y += 2;
+
+			while (y < limit) {
+				eventData[y] = (int) (x >> 20);
+				x += nStep;
+				y += 2;
+			}
+
+			if (y == limit) {
+				eventData[y] = Math.max(eventData[y], (int) (x >> 20));
+			}
 		}
 	}
 
@@ -1459,8 +1514,68 @@ public abstract class AbstractRasterizer {
 	}
 
 	private void populateRightEventsB(int a) {
-		if (clipLine(a)) {
-			plotEventsRight();
+		final int[] vertexData = this.vertexData;
+
+		final int ax0 = vertexData[a];
+		final int ay0 = vertexData[a + 1];
+		final int ax1 = vertexData[a + 2];
+		final int ay1 = vertexData[a + 3];
+
+		final int[] eventData = eventDataB;
+		int y0 = ((ay0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
+		int y1 = ((ay1 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
+
+		if (y0 > y1) {
+			final int swap = y0;
+			y0 = y1;
+			y1 = swap;
+		}
+
+		if (y0 < 0) {
+			y0 = 0;
+		} else if (y0 > MAX_PIXEL_Y) {
+			return;
+		}
+
+		if (y1 > MAX_PIXEL_Y) {
+			y1 = MAX_PIXEL_Y;
+		} else if (y1 < 0) {
+			return;
+		}
+
+		// difference from left: is high index in pairs
+		final int limit = (y1 << 1) + 1;
+		final int dx = ax1 - ax0;
+
+		if (dx == 0) {
+			final int x = (ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
+
+			// difference from left: is high index in pairs
+			for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
+				eventData[y] = x;
+			}
+		} else {
+			final int dy = ay1 - ay0;
+			final long n = (((long) dx) << 16) / dy;
+			final long nStep = n << PRECISION_BITS;
+			// difference from left: rounding looses tie
+			long x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x7FFFFL;
+
+			// difference from left: is high index in pairs
+			int y = (y0 << 1) + 1;
+			eventData[y] = Math.min(eventData[y], (int) (x >> 20));
+			x += nStep;
+			y += 2;
+
+			while (y < limit) {
+				eventData[y] = (int) (x >> 20);
+				x += nStep;
+				y += 2;
+			}
+
+			if (y == limit) {
+				eventData[y] = Math.min(eventData[y], (int) (x >> 20));
+			}
 		}
 	}
 
@@ -2127,6 +2242,7 @@ public abstract class AbstractRasterizer {
 	}
 
 	long computeTileCoverage() {
+		//return computeTileCoverageNew();
 		return computeTileCoverageOld();
 	}
 
@@ -2453,7 +2569,40 @@ public abstract class AbstractRasterizer {
 	}
 
 	void prepareEvents(int eventKey) {
+		//prepareEventsNew(eventKey);
 		prepareEventsOld(eventKey);
+
+		//
+		//boolean diff = false;
+		//
+		//for (int y = minPixelY; y <= maxPixelY; ++y) {
+		//	final int j = y << 1;
+		//	final int k = j + 1;
+		//
+		//	if (Math.max(0, eventData[j]) != Math.max(0, eventDataB[j])
+		//			|| Math.min(2048, eventData[k]) != Math.min(2048, eventDataB[k])) {
+		//		diff = true;
+		//		break;
+		//	}
+		//}
+		//
+		//if (diff) {
+		//	for (int y = minPixelY; y <= maxPixelY; ++y) {
+		//		final int j = y << 1;
+		//		final int k = j + 1;
+		//		final boolean leftMatch = Math.max(0, eventData[j]) == Math.max(0, eventDataB[j]);
+		//		final boolean rightMatch = Math.min(2048, eventData[k]) ==  Math.min(2048, eventDataB[k]);
+		//		String match = leftMatch
+		//				? rightMatch ? "" : "R"
+		//				: rightMatch ? "L" : "LR";
+		//
+		//		System.out.println(String.format("%d left: %d vs %d   right: %d vs %d   %s",
+		//				y, eventData[j], eventDataB[j], eventData[k], eventDataB[k], match));
+		//	}
+		//
+		//	System.out.println();
+		//	//prepareEventsNew(eventKey);
+		//}
 	}
 
 	void prepareEventsNew(int eventKey) {
@@ -2467,34 +2616,5 @@ public abstract class AbstractRasterizer {
 		eventY0 = minPixelY & TILE_AXIS_MASK;
 		eventLimit = ((maxTileOriginY + 7) << 1);
 		EVENT_FILLERS[eventKey].apply();
-		//boolean diff = false;
-		//
-		//for (int y = minPixelY; y <= maxPixelY; ++y) {
-		//	final int j = y << 1;
-		//	final int k = j + 1;
-		//
-		//	if (eventData[j] != eventDataB[j] || eventData[k] != eventDataB[k]) {
-		//		diff = true;
-		//		break;
-		//	}
-		//}
-		//
-		//if (diff) {
-		//	for (int y = minPixelY; y <= maxPixelY; ++y) {
-		//		final int j = y << 1;
-		//		final int k = j + 1;
-		//		final boolean leftMatch = eventData[j] == eventDataB[j];
-		//		final boolean rightMatch = eventData[k] == eventDataB[k];
-		//		String match = leftMatch
-		//				? rightMatch ? "" : "R"
-		//				: rightMatch ? "L" : "LR";
-		//
-		//		System.out.println(String.format("%d left: %d vs %d   right: %d vs %d   %s",
-		//				y, eventData[j], eventDataB[j], eventData[k], eventDataB[k], match));
-		//	}
-		//
-		//	System.out.println();
-		//	//EVENT_FILLERS_B[eventKey].apply();
-		//}
 	}
 }
