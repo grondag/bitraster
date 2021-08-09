@@ -27,8 +27,12 @@ public class MicroTimer {
 	private long elapsed;
 	private long min;
 	private long max;
-	private long last;
 	private long started;
+
+	private int subsetHits;
+	private long subsetElapsed;
+	private long subsetMin;
+	private long subsetMax;
 
 	public MicroTimer(String label, int sampleSize) {
 		this.label = label;
@@ -47,18 +51,13 @@ public class MicroTimer {
 		started = System.nanoTime();
 	}
 
-	public long last() {
-		return last;
-	}
-
 	/**
 	 * Returns true if timer output stats this sample. For use if want to output
 	 * supplementary information at same time.
 	 */
-	public boolean stop() {
+	public boolean stop(boolean subset) {
 		final long t = System.nanoTime() - started;
 		elapsed += t;
-		last = t;
 
 		if (t < min) {
 			min = t;
@@ -66,6 +65,19 @@ public class MicroTimer {
 
 		if (t > max) {
 			max = t;
+		}
+
+		if (subset) {
+			++subsetHits;
+			subsetElapsed += t;
+
+			if (t < subsetMin) {
+				subsetMin = t;
+			}
+
+			if (t > subsetMax) {
+				subsetMax = t;
+			}
 		}
 
 		final long h = ++hits;
@@ -85,6 +97,20 @@ public class MicroTimer {
 
 		System.out.println(String.format("Avg %s duration = %,d ns, min = %d, max = %d, total duration = %,d, total runs = %,d", label,
 				elapsed / hits, min, max, elapsed / 1000000, hits));
+
+		if (subsetHits > 0) {
+			if (subsetElapsed == 0) {
+				subsetElapsed = 1;
+			}
+
+			System.out.println(String.format("Subset avg duration = %,d ns, min = %d, max = %d, total duration = %,d, (%d) total runs = %,d",
+					subsetElapsed / subsetHits, subsetMin, subsetMax, subsetElapsed / 1000000, subsetElapsed * 100L / elapsed, subsetHits));
+
+			subsetHits = 0;
+			subsetElapsed = 0;
+			subsetMax = Long.MIN_VALUE;
+			subsetMin = Long.MAX_VALUE;
+		}
 
 		hits = 0;
 		elapsed = 0;

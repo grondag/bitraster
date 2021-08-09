@@ -874,8 +874,7 @@ public abstract class AbstractRasterizer {
 		final int[] eventData = this.eventData;
 		final int y0 = eventY0;
 		final int limit = eventLimit;
-		final int dx = ax1 - ax0;
-
+		final long dx = ax1 - ax0;
 
 		if (dx == 0) {
 			final int x = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
@@ -885,8 +884,8 @@ public abstract class AbstractRasterizer {
 			}
 		} else {
 			final int dy = ay1 - ay0;
-			final long n = (((long) dx) << 16) / dy;
-			long nStep = n << PRECISION_BITS;
+			final long n = (dx << 16) / dy;
+			final long nStep = n << PRECISION_BITS;
 			long x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x100000L;
 
 			for (int y = (y0 << 1); y <= limit; y += 2) {
