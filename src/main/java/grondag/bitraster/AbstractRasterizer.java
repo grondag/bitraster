@@ -152,7 +152,8 @@ import static grondag.bitraster.Matrix4L.MATRIX_PRECISION_HALF;
 public abstract class AbstractRasterizer {
 	final Matrix4L mvpMatrix = new Matrix4L();
 	final int[] vertexData = new int[VERTEX_DATA_LENGTH];
-	final int[] packedEvents = new int[PIXEL_HEIGHT];
+	final int[] rightEvents = new int[PIXEL_HEIGHT];
+	final int[] leftEvents = new int[PIXEL_HEIGHT];
 	final long[] tiles = new long[TILE_COUNT];
 	final EventFiller[] EVENT_FILLERS = new EventFiller[0x1000];
 
@@ -610,7 +611,8 @@ public abstract class AbstractRasterizer {
 	final void copyFrom(AbstractRasterizer source) {
 		mvpMatrix.copyFrom(source.mvpMatrix);
 		System.arraycopy(source.vertexData, 0, vertexData, 0, VERTEX_DATA_LENGTH);
-		System.arraycopy(source.packedEvents, 0, packedEvents, 0, PIXEL_HEIGHT);
+		System.arraycopy(source.leftEvents, 0, leftEvents, 0, PIXEL_HEIGHT);
+		System.arraycopy(source.rightEvents, 0, rightEvents, 0, PIXEL_HEIGHT);
 		System.arraycopy(source.tiles, 0, tiles, 0, TILE_COUNT);
 	}
 
@@ -813,7 +815,8 @@ public abstract class AbstractRasterizer {
 	abstract int prepareBounds(int v0, int v1, int v2, int v3);
 
 	private void populateFlatEvents(int position, int y0In) {
-		final int[] events = packedEvents;
+		final int[] leftEvents = this.leftEvents;
+		final int[] rightEvents = this.rightEvents;
 
 		if (position == EDGE_TOP) {
 			final int py = ((y0In + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) + 1;
@@ -826,7 +829,8 @@ public abstract class AbstractRasterizer {
 			assert y1 < PIXEL_HEIGHT;
 
 			for (int y = y0; y <= y1; ++y) {
-				events[y] = PIXEL_WIDTH;
+				leftEvents[y] = PIXEL_WIDTH;
+				rightEvents[y] = -1;
 			}
 		} else if (position == EDGE_BOTTOM) {
 			final int py = (y0In >> PRECISION_BITS);
@@ -839,7 +843,8 @@ public abstract class AbstractRasterizer {
 			assert y1 < PIXEL_HEIGHT;
 
 			for (int y = y0; y < y1; ++y) {
-				events[y] = PIXEL_WIDTH;
+				leftEvents[y] = PIXEL_WIDTH;
+				rightEvents[y] = -1;
 			}
 		} else {
 			assert position == EDGE_POINT;
@@ -850,7 +855,7 @@ public abstract class AbstractRasterizer {
 	 * Puts left edge at screen boundary.
 	 */
 	private void populateLeftEvents() {
-		final int[] events = packedEvents;
+		final int[] events = leftEvents;
 		final int limit = eventY1;
 
 		for (int y = eventY0; y <= limit; ++y) {
@@ -865,7 +870,7 @@ public abstract class AbstractRasterizer {
 		final int ax1 = vertexData[a + 2];
 		final int ay1 = vertexData[a + 3];
 
-		final int[] events = packedEvents;
+		final int[] events = leftEvents;
 		final int y0 = eventY0;
 		final int y1 = eventY1;
 		final int dx = ax1 - ax0;
@@ -883,27 +888,19 @@ public abstract class AbstractRasterizer {
 			long x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x100000L;
 
 			for (int y = y0; y <= y1; ++y) {
-				events[y] = clampLeft(x);
+				events[y] = (int) (x >> 20);
 				x += nStep;
 			}
 		}
 	}
 
-	private static int clampLeft (long x) {
-		return x < 0 ? 0 : ((int) (x >> 20) & 0xFFFF);
-	}
-
-	private static int clampRight (long x) {
-		return x < 0 ? 0 : ((int) (x >> 4) & 0xFFFF0000);
-	}
-
 	private void populateRightEvents() {
-		final int[] events = packedEvents;
+		final int[] events = rightEvents;
 		final int y1 = eventY1;
 
 		// difference from left: is high index in pairs
 		for (int y = eventY0; y <= y1; ++y) {
-			events[y] |= (PIXEL_WIDTH << 16);
+			events[y] = PIXEL_WIDTH;
 		}
 	}
 
@@ -915,7 +912,7 @@ public abstract class AbstractRasterizer {
 		final int ax1 = vertexData[a + 2];
 		final int ay1 = vertexData[a + 3];
 
-		final int[] events = packedEvents;
+		final int[] events = rightEvents;
 		final int y0 = eventY0;
 		final int y1 = eventY1;
 		final int dx = ax1 - ax0;
@@ -935,7 +932,7 @@ public abstract class AbstractRasterizer {
 
 			// difference from left: is high index in pairs
 			for (int y = y0; y <= y1; ++y) {
-				events[y] |= clampRight(x);
+				events[y] = (int) (x >> 20);
 				x += nStep;
 			}
 		}
@@ -954,7 +951,7 @@ public abstract class AbstractRasterizer {
 		final int bx1 = vertexData[b + 2];
 		final int by1 = vertexData[b + 3];
 
-		final int[] events = packedEvents;
+		final int[] events = leftEvents;
 		final int y0 = eventY0;
 		final int y1 = eventY1;
 
@@ -988,7 +985,7 @@ public abstract class AbstractRasterizer {
 		for (int y = y0; y <= y1; ++y) {
 			final long x = ax > bx ? ax : bx;
 
-			events[y] = clampLeft(x);
+			events[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1013,7 +1010,7 @@ public abstract class AbstractRasterizer {
 		final int cx1 = vertexData[c + 2];
 		final int cy1 = vertexData[c + 3];
 
-		final int[] events = packedEvents;
+		final int[] events = leftEvents;
 		final int y0 = eventY0;
 		final int y1 = eventY1;
 
@@ -1061,7 +1058,7 @@ public abstract class AbstractRasterizer {
 			long x = ax > bx ? ax : bx;
 			if (cx > x) x = cx;
 
-			events[y] = clampLeft(x);
+			events[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1092,7 +1089,7 @@ public abstract class AbstractRasterizer {
 		final int dx1 = vertexData[d + 2];
 		final int dy1 = vertexData[d + 3];
 
-		final int[] events = packedEvents;
+		final int[] events = leftEvents;
 		final int y0 = eventY0;
 		final int y1 = eventY1;
 
@@ -1154,7 +1151,7 @@ public abstract class AbstractRasterizer {
 			if (cx > x) x = cx;
 			if (dx > x) x = dx;
 
-			events[y] = clampLeft(x);
+			events[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1176,7 +1173,7 @@ public abstract class AbstractRasterizer {
 		final int bx1 = vertexData[b + 2];
 		final int by1 = vertexData[b + 3];
 
-		final int[] events = packedEvents;
+		final int[] events = rightEvents;
 		final int y0 = eventY0;
 		final int y1 = eventY1;
 
@@ -1213,7 +1210,7 @@ public abstract class AbstractRasterizer {
 			// difference from left: lower value wins
 			final long x = ax < bx ? ax : bx;
 
-			events[y] |= clampRight(x);
+			events[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1238,7 +1235,7 @@ public abstract class AbstractRasterizer {
 		final int cx1 = vertexData[c + 2];
 		final int cy1 = vertexData[c + 3];
 
-		final int[] events = packedEvents;
+		final int[] events = rightEvents;
 		final int y0 = eventY0;
 		final int y1 = eventY1;
 
@@ -1291,7 +1288,7 @@ public abstract class AbstractRasterizer {
 
 			if (cx < x) x = cx;
 
-			events[y] |= clampRight(x);
+			events[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1322,7 +1319,7 @@ public abstract class AbstractRasterizer {
 		final int dx1 = vertexData[d + 2];
 		final int dy1 = vertexData[d + 3];
 
-		final int[] events = packedEvents;
+		final int[] events = rightEvents;
 		final int y0 = eventY0;
 		final int y1 = eventY1;
 
@@ -1390,7 +1387,7 @@ public abstract class AbstractRasterizer {
 			if (cx < x) x = cx;
 			if (dx < x) x = dx;
 
-			events[y] |= clampRight(x);
+			events[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1469,7 +1466,8 @@ public abstract class AbstractRasterizer {
 	}
 
 	long computeTileCoverage() {
-		final int[] events = packedEvents;
+		final int[] left = leftEvents;
+		final int[] right = rightEvents;
 
 		int y = tileOriginY;
 		final int tx = tileOriginX;
@@ -1478,9 +1476,8 @@ public abstract class AbstractRasterizer {
 
 		long mask = 0;
 
-		int e = events[y];
-		int leftX = (e & 0xFFFF) - tx;
-		int rightX = baseX - (e >> 16);
+		int leftX = left[y] - tx;
+		int rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1492,9 +1489,8 @@ public abstract class AbstractRasterizer {
 			mask = m;
 		}
 
-		e = events[++y];
-		leftX = (e & 0xFFFF) - tx;
-		rightX = baseX - (e >> 16);
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1506,9 +1502,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 8;
 		}
 
-		e = events[++y];
-		leftX = (e & 0xFFFF) - tx;
-		rightX = baseX - (e >> 16);
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1520,9 +1515,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 16;
 		}
 
-		e = events[++y];
-		leftX = (e & 0xFFFF) - tx;
-		rightX = baseX - (e >> 16);
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1534,9 +1528,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 24;
 		}
 
-		e = events[++y];
-		leftX = (e & 0xFFFF) - tx;
-		rightX = baseX - (e >> 16);
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1548,9 +1541,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 32;
 		}
 
-		e = events[++y];
-		leftX = (e & 0xFFFF) - tx;
-		rightX = baseX - (e >> 16);
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1562,9 +1554,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 40;
 		}
 
-		e = events[++y];
-		leftX = (e & 0xFFFF) - tx;
-		rightX = baseX - (e >> 16);
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1576,9 +1567,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 48;
 		}
 
-		e = events[++y];
-		leftX = (e & 0xFFFF) - tx;
-		rightX = baseX - (e >> 16);
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1589,6 +1579,16 @@ public abstract class AbstractRasterizer {
 
 			mask |= m << 56;
 		}
+
+		// WIP: remove
+		//long bMask = computeTileCoverageB();
+		//
+		//if (bMask != mask) {
+		//	System.out.println("Prior");
+		//	Util.printMask(mask);
+		//	System.out.println("New");
+		//	Util.printMask(bMask);
+		//}
 
 		return mask;
 	}
