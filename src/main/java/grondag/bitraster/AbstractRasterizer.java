@@ -1401,10 +1401,10 @@ public abstract class AbstractRasterizer {
 		final int baseX = tx + 7;
 
 		// +1 to left shift because events are in pairs
-		int eventIndex = (tileIndex >> TILE_WIDTH_BITS) << (TILE_AXIS_SHIFT + 1);
+		final int baseEventIndex = (tileIndex >> TILE_WIDTH_BITS) << (TILE_AXIS_SHIFT + 1);
 		long mask = 0;
-		int leftX = data[eventIndex] - tx;
-		int rightX = baseX - data[++eventIndex];
+		int leftX = data[baseEventIndex] - tx;
+		int rightX = baseX - data[baseEventIndex + 1];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1416,8 +1416,8 @@ public abstract class AbstractRasterizer {
 			mask = m;
 		}
 
-		leftX = data[++eventIndex] - tx;
-		rightX = baseX - data[++eventIndex];
+		leftX = data[baseEventIndex + 2] - tx;
+		rightX = baseX - data[baseEventIndex + 3];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1429,8 +1429,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 8;
 		}
 
-		leftX = data[++eventIndex] - tx;
-		rightX = baseX - data[++eventIndex];
+		leftX = data[baseEventIndex + 4] - tx;
+		rightX = baseX - data[baseEventIndex + 5];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1442,8 +1442,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 16;
 		}
 
-		leftX = data[++eventIndex] - tx;
-		rightX = baseX - data[++eventIndex];
+		leftX = data[baseEventIndex + 6] - tx;
+		rightX = baseX - data[baseEventIndex + 7];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1455,8 +1455,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 24;
 		}
 
-		leftX = data[++eventIndex] - tx;
-		rightX = baseX - data[++eventIndex];
+		leftX = data[baseEventIndex + 8] - tx;
+		rightX = baseX - data[baseEventIndex + 9];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1468,8 +1468,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 32;
 		}
 
-		leftX = data[++eventIndex] - tx;
-		rightX = baseX - data[++eventIndex];
+		leftX = data[baseEventIndex + 10] - tx;
+		rightX = baseX - data[baseEventIndex + 11];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1481,8 +1481,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 40;
 		}
 
-		leftX = data[++eventIndex] - tx;
-		rightX = baseX - data[++eventIndex];
+		leftX = data[baseEventIndex + 12] - tx;
+		rightX = baseX - data[baseEventIndex + 13];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1494,8 +1494,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 48;
 		}
 
-		leftX = data[++eventIndex] - tx;
-		rightX = baseX - data[++eventIndex];
+		leftX = data[baseEventIndex + 14] - tx;
+		rightX = baseX - data[baseEventIndex + 15];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
