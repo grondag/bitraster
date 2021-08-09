@@ -50,6 +50,7 @@ public class Constants {
 	static final int PRECISE_WIDTH_CLAMP = PRECISE_WIDTH - PRECISE_PIXEL_CENTER;
 	static final int TILE_HEIGHT_BITS = 8;
 	static final int TILE_HEIGHT = 1 << TILE_HEIGHT_BITS;
+	static final int TILE_HEIGHT_MASK = (TILE_HEIGHT - 1) << TILE_WIDTH_BITS;
 	public static final int PIXEL_HEIGHT = TILE_HEIGHT * TILE_PIXEL_DIAMETER;
 	static final int MAX_PIXEL_Y = PIXEL_HEIGHT - 1;
 	static final int HALF_PIXEL_HEIGHT = PIXEL_HEIGHT / 2;

@@ -136,11 +136,12 @@ import static grondag.bitraster.Constants.SCANT_PRECISE_PIXEL_CENTER;
 import static grondag.bitraster.Constants.TILE_AXIS_MASK;
 import static grondag.bitraster.Constants.TILE_AXIS_SHIFT;
 import static grondag.bitraster.Constants.TILE_COUNT;
+import static grondag.bitraster.Constants.TILE_HEIGHT_MASK;
 import static grondag.bitraster.Constants.TILE_WIDTH;
+import static grondag.bitraster.Constants.TILE_WIDTH_BITS;
+import static grondag.bitraster.Constants.TILE_WIDTH_MASK;
 import static grondag.bitraster.Constants.VERTEX_DATA_LENGTH;
-import static grondag.bitraster.Indexer.tileIndex;
-import static grondag.bitraster.Indexer.tileOriginX;
-import static grondag.bitraster.Indexer.tileOriginY;
+import static grondag.bitraster.Indexer.tileIndexFromPixelXY;
 
 // Some elements are adapted from content found at
 // https://fgiesen.wordpress.com/2013/02/17/optimizing-sw-occlusion-culling-index/
@@ -641,10 +642,10 @@ public abstract class AbstractRasterizer {
 	}
 
 	final boolean isQuadPartiallyClear() {
-		final int minTileOriginX = minPixelX & TILE_AXIS_MASK;
-		final int maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
-		final int maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
-		int tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
+		final int minTileX = minPixelX >> TILE_AXIS_SHIFT;
+		final int maxTileX = maxPixelX >> TILE_AXIS_SHIFT;
+		final int maxTileY = (maxPixelY >> TILE_AXIS_SHIFT) << TILE_WIDTH_BITS;
+		int tileIndex = tileIndexFromPixelXY(minPixelX, minPixelY);
 
 		boolean goRight = true;
 
@@ -654,8 +655,8 @@ public abstract class AbstractRasterizer {
 			}
 
 			if (goRight) {
-				if (tileOriginX(tileIndex) == maxTileOriginX) {
-					if (tileOriginY(tileIndex) == maxTileOriginY) {
+				if ((tileIndex & TILE_WIDTH_MASK) == maxTileX) {
+					if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
 						return false;
 					} else {
 						tileIndex += TILE_WIDTH;
@@ -665,8 +666,8 @@ public abstract class AbstractRasterizer {
 					++tileIndex;
 				}
 			} else {
-				if (tileOriginX(tileIndex) == minTileOriginX) {
-					if (tileOriginY(tileIndex) == maxTileOriginY) {
+				if ((tileIndex & TILE_WIDTH_MASK) == minTileX) {
+					if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
 						return false;
 					} else {
 						tileIndex += TILE_WIDTH;
@@ -708,10 +709,10 @@ public abstract class AbstractRasterizer {
 	}
 
 	final boolean isQuadPartiallyOccluded() {
-		final int minTileOriginX = minPixelX & TILE_AXIS_MASK;
-		final int maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
-		final int maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
-		int tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
+		final int minTileX = minPixelX >> TILE_AXIS_SHIFT;
+		final int maxTileX = maxPixelX >> TILE_AXIS_SHIFT;
+		final int maxTileY = (maxPixelY >> TILE_AXIS_SHIFT) << TILE_WIDTH_BITS;
+		int tileIndex = tileIndexFromPixelXY(minPixelX, minPixelY);
 		boolean goRight = true;
 
 		while (true) {
@@ -720,8 +721,8 @@ public abstract class AbstractRasterizer {
 			}
 
 			if (goRight) {
-				if (tileOriginX(tileIndex) == maxTileOriginX) {
-					if (tileOriginY(tileIndex) == maxTileOriginY) {
+				if ((tileIndex & TILE_WIDTH_MASK) == maxTileX) {
+					if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
 						return false;
 					} else {
 						tileIndex += TILE_WIDTH;
@@ -731,8 +732,8 @@ public abstract class AbstractRasterizer {
 					++tileIndex;
 				}
 			} else {
-				if (tileOriginX(tileIndex) == minTileOriginX) {
-					if (tileOriginY(tileIndex) == maxTileOriginY) {
+				if ((tileIndex & TILE_WIDTH_MASK) == minTileX) {
+					if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
 						return false;
 					} else {
 						tileIndex += TILE_WIDTH;
@@ -757,18 +758,19 @@ public abstract class AbstractRasterizer {
 	}
 
 	final void drawQuad() {
-		final int minTileOriginX = minPixelX & TILE_AXIS_MASK;
-		final int maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
-		final int maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
-		int tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
+		final int minTileX = minPixelX >> TILE_AXIS_SHIFT;
+		final int maxTileX = maxPixelX >> TILE_AXIS_SHIFT;
+		final int maxTileY = (maxPixelY >> TILE_AXIS_SHIFT) << TILE_WIDTH_BITS;
+
+		int tileIndex = tileIndexFromPixelXY(minPixelX, minPixelY);
 		boolean goRight = true;
 
 		while (true) {
 			drawQuadInner(tileIndex);
 
 			if (goRight) {
-				if (tileOriginX(tileIndex) == maxTileOriginX) {
-					if (tileOriginY(tileIndex) == maxTileOriginY) {
+				if ((tileIndex & TILE_WIDTH_MASK) == maxTileX) {
+					if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
 						return;
 					} else {
 						tileIndex += TILE_WIDTH;
@@ -778,8 +780,8 @@ public abstract class AbstractRasterizer {
 					++tileIndex;
 				}
 			} else {
-				if (tileOriginX(tileIndex) == minTileOriginX) {
-					if (tileOriginY(tileIndex) == maxTileOriginY) {
+				if ((tileIndex & TILE_WIDTH_MASK) == minTileX) {
+					if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
 						return;
 					} else {
 						tileIndex += TILE_WIDTH;
@@ -1418,16 +1420,14 @@ public abstract class AbstractRasterizer {
 
 	long computeTileCoverage(int tileIndex) {
 		final int[] data = eventData;
-
-		int y = tileOriginY(tileIndex) << 1;
-		final int tx = tileOriginX(tileIndex);
-
+		final int tx = (tileIndex & TILE_WIDTH_MASK) << TILE_AXIS_SHIFT;
 		final int baseX = tx + 7;
 
+		// +1 to left shift because events are in pairs
+		int eventIndex = (tileIndex >> TILE_WIDTH_BITS) << (TILE_AXIS_SHIFT + 1);
 		long mask = 0;
-
-		int leftX = data[y] - tx;
-		int rightX = baseX - data[++y];
+		int leftX = data[eventIndex] - tx;
+		int rightX = baseX - data[++eventIndex];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1439,8 +1439,8 @@ public abstract class AbstractRasterizer {
 			mask = m;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = data[++eventIndex] - tx;
+		rightX = baseX - data[++eventIndex];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1452,8 +1452,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 8;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = data[++eventIndex] - tx;
+		rightX = baseX - data[++eventIndex];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1465,8 +1465,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 16;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = data[++eventIndex] - tx;
+		rightX = baseX - data[++eventIndex];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1478,8 +1478,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 24;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = data[++eventIndex] - tx;
+		rightX = baseX - data[++eventIndex];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1491,8 +1491,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 32;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = data[++eventIndex] - tx;
+		rightX = baseX - data[++eventIndex];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1504,8 +1504,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 40;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = data[++eventIndex] - tx;
+		rightX = baseX - data[++eventIndex];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1517,8 +1517,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 48;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = data[++eventIndex] - tx;
+		rightX = baseX - data[++eventIndex];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
