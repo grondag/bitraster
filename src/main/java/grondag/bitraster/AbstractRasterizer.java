@@ -1403,108 +1403,112 @@ public abstract class AbstractRasterizer {
 		// +1 to left shift because events are in pairs
 		final int baseEventIndex = (tileIndex >> TILE_WIDTH_BITS) << (TILE_AXIS_SHIFT + 1);
 		long mask = 0;
-		int leftX = data[baseEventIndex] - tx;
-		int rightX = baseX - data[baseEventIndex + 1];
+		final int l0 = data[baseEventIndex] - tx;
+		final int r0 = baseX - data[baseEventIndex + 1];
 
-		if (leftX < 8 && rightX < 8) {
-			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+		if (l0 < 8 && r0 < 8) {
+			long m = l0 <= 0 ? 0xFF : ((0xFF << l0) & 0xFF);
 
-			if (rightX > 0) {
-				m &= (0xFF >> rightX);
+			if (r0 > 0) {
+				m &= (0xFF >> r0);
 			}
 
 			mask = m;
 		}
 
-		leftX = data[baseEventIndex + 2] - tx;
-		rightX = baseX - data[baseEventIndex + 3];
+		final int l7 = data[baseEventIndex + 14] - tx;
+		final int r7 = baseX - data[baseEventIndex + 15];
 
-		if (leftX < 8 && rightX < 8) {
-			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+		if (l7 < 8 && r7 < 8) {
+			long m = l7 <= 0 ? 0xFF : ((0xFF << l7) & 0xFF);
 
-			if (rightX > 0) {
-				m &= (0xFF >> rightX);
+			if (r7 > 0) {
+				m &= (0xFF >> r7);
+			}
+
+			mask |= m << 56;
+		}
+
+		if (mask == 0xFF000000000000FFL) {
+			return -1L;
+		}
+
+		final int l1 = data[baseEventIndex + 2] - tx;
+		final int r1 = baseX - data[baseEventIndex + 3];
+
+		if (l1 < 8 && r1 < 8) {
+			long m = l1 <= 0 ? 0xFF : ((0xFF << l1) & 0xFF);
+
+			if (r1 > 0) {
+				m &= (0xFF >> r1);
 			}
 
 			mask |= m << 8;
 		}
 
-		leftX = data[baseEventIndex + 4] - tx;
-		rightX = baseX - data[baseEventIndex + 5];
+		final int l2 = data[baseEventIndex + 4] - tx;
+		final int r2 = baseX - data[baseEventIndex + 5];
 
-		if (leftX < 8 && rightX < 8) {
-			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+		if (l2 < 8 && r2 < 8) {
+			long m = l2 <= 0 ? 0xFF : ((0xFF << l2) & 0xFF);
 
-			if (rightX > 0) {
-				m &= (0xFF >> rightX);
+			if (r2 > 0) {
+				m &= (0xFF >> r2);
 			}
 
 			mask |= m << 16;
 		}
 
-		leftX = data[baseEventIndex + 6] - tx;
-		rightX = baseX - data[baseEventIndex + 7];
+		final int l3 = data[baseEventIndex + 6] - tx;
+		final int r3 = baseX - data[baseEventIndex + 7];
 
-		if (leftX < 8 && rightX < 8) {
-			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+		if (l3 < 8 && r3 < 8) {
+			long m = l3 <= 0 ? 0xFF : ((0xFF << l3) & 0xFF);
 
-			if (rightX > 0) {
-				m &= (0xFF >> rightX);
+			if (r3 > 0) {
+				m &= (0xFF >> r3);
 			}
 
 			mask |= m << 24;
 		}
 
-		leftX = data[baseEventIndex + 8] - tx;
-		rightX = baseX - data[baseEventIndex + 9];
+		final int l4 = data[baseEventIndex + 8] - tx;
+		final int r4 = baseX - data[baseEventIndex + 9];
 
-		if (leftX < 8 && rightX < 8) {
-			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+		if (l4 < 8 && r4 < 8) {
+			long m = l4 <= 0 ? 0xFF : ((0xFF << l4) & 0xFF);
 
-			if (rightX > 0) {
-				m &= (0xFF >> rightX);
+			if (r4 > 0) {
+				m &= (0xFF >> r4);
 			}
 
 			mask |= m << 32;
 		}
 
-		leftX = data[baseEventIndex + 10] - tx;
-		rightX = baseX - data[baseEventIndex + 11];
+		final int l5 = data[baseEventIndex + 10] - tx;
+		final int r5 = baseX - data[baseEventIndex + 11];
 
-		if (leftX < 8 && rightX < 8) {
-			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+		if (l5 < 8 && r5 < 8) {
+			long m = l5 <= 0 ? 0xFF : ((0xFF << l5) & 0xFF);
 
-			if (rightX > 0) {
-				m &= (0xFF >> rightX);
+			if (r5 > 0) {
+				m &= (0xFF >> r5);
 			}
 
 			mask |= m << 40;
 		}
 
-		leftX = data[baseEventIndex + 12] - tx;
-		rightX = baseX - data[baseEventIndex + 13];
+		final int l6 = data[baseEventIndex + 12] - tx;
+		final int r6 = baseX - data[baseEventIndex + 13];
 
-		if (leftX < 8 && rightX < 8) {
-			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
+		if (l6 < 8 && r6 < 8) {
+			long m = l6 <= 0 ? 0xFF : ((0xFF << l6) & 0xFF);
 
-			if (rightX > 0) {
-				m &= (0xFF >> rightX);
+			if (r6 > 0) {
+				m &= (0xFF >> r6);
 			}
 
 			mask |= m << 48;
-		}
-
-		leftX = data[baseEventIndex + 14] - tx;
-		rightX = baseX - data[baseEventIndex + 15];
-
-		if (leftX < 8 && rightX < 8) {
-			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
-
-			if (rightX > 0) {
-				m &= (0xFF >> rightX);
-			}
-
-			mask |= m << 56;
 		}
 
 		// WIP: remove
