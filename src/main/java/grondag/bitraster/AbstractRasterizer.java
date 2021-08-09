@@ -645,37 +645,29 @@ public abstract class AbstractRasterizer {
 		final int minTileX = minPixelX >> TILE_AXIS_SHIFT;
 		final int maxTileX = maxPixelX >> TILE_AXIS_SHIFT;
 		final int maxTileY = (maxPixelY >> TILE_AXIS_SHIFT) << TILE_WIDTH_BITS;
-		int tileIndex = tileIndexFromPixelXY(minPixelX, minPixelY);
 
-		boolean goRight = true;
+		int tileIndex = tileIndexFromPixelXY(minPixelX, minPixelY);
+		int xLimit = maxTileX;
+		int xInc = 1;
 
 		while (true) {
 			if (isQuadPartiallyClearInner(tileIndex)) {
 				return true;
 			}
 
-			if (goRight) {
-				if ((tileIndex & TILE_WIDTH_MASK) == maxTileX) {
-					if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
-						return false;
-					} else {
-						tileIndex += TILE_WIDTH;
-						goRight = !goRight;
-					}
+			if ((tileIndex & TILE_WIDTH_MASK) == xLimit) {
+				if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
+					return false;
 				} else {
-					++tileIndex;
+					// move up
+					tileIndex += TILE_WIDTH;
+					// flip x order
+					xLimit = xLimit == maxTileX ? minTileX : maxTileX;
+					xInc = -xInc;
 				}
 			} else {
-				if ((tileIndex & TILE_WIDTH_MASK) == minTileX) {
-					if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
-						return false;
-					} else {
-						tileIndex += TILE_WIDTH;
-						goRight = !goRight;
-					}
-				} else {
-					--tileIndex;
-				}
+				// move left or right
+				tileIndex += xInc;
 			}
 		}
 	}
@@ -712,36 +704,29 @@ public abstract class AbstractRasterizer {
 		final int minTileX = minPixelX >> TILE_AXIS_SHIFT;
 		final int maxTileX = maxPixelX >> TILE_AXIS_SHIFT;
 		final int maxTileY = (maxPixelY >> TILE_AXIS_SHIFT) << TILE_WIDTH_BITS;
+
 		int tileIndex = tileIndexFromPixelXY(minPixelX, minPixelY);
-		boolean goRight = true;
+		int xLimit = maxTileX;
+		int xInc = 1;
 
 		while (true) {
 			if (isQuadPartiallyOccludedInner(tileIndex)) {
 				return true;
 			}
 
-			if (goRight) {
-				if ((tileIndex & TILE_WIDTH_MASK) == maxTileX) {
-					if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
-						return false;
-					} else {
-						tileIndex += TILE_WIDTH;
-						goRight = !goRight;
-					}
+			if ((tileIndex & TILE_WIDTH_MASK) == xLimit) {
+				if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
+					return false;
 				} else {
-					++tileIndex;
+					// move up
+					tileIndex += TILE_WIDTH;
+					// flip x order
+					xLimit = xLimit == maxTileX ? minTileX : maxTileX;
+					xInc = -xInc;
 				}
 			} else {
-				if ((tileIndex & TILE_WIDTH_MASK) == minTileX) {
-					if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
-						return false;
-					} else {
-						tileIndex += TILE_WIDTH;
-						goRight = !goRight;
-					}
-				} else {
-					--tileIndex;
-				}
+				// move left or right
+				tileIndex += xInc;
 			}
 		}
 	}
@@ -763,33 +748,25 @@ public abstract class AbstractRasterizer {
 		final int maxTileY = (maxPixelY >> TILE_AXIS_SHIFT) << TILE_WIDTH_BITS;
 
 		int tileIndex = tileIndexFromPixelXY(minPixelX, minPixelY);
-		boolean goRight = true;
+		int xLimit = maxTileX;
+		int xInc = 1;
 
 		while (true) {
 			drawQuadInner(tileIndex);
 
-			if (goRight) {
-				if ((tileIndex & TILE_WIDTH_MASK) == maxTileX) {
-					if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
-						return;
-					} else {
-						tileIndex += TILE_WIDTH;
-						goRight = !goRight;
-					}
+			if ((tileIndex & TILE_WIDTH_MASK) == xLimit) {
+				if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
+					return;
 				} else {
-					++tileIndex;
+					// move up
+					tileIndex += TILE_WIDTH;
+					// flip x order
+					xLimit = xLimit == maxTileX ? minTileX : maxTileX;
+					xInc = -xInc;
 				}
 			} else {
-				if ((tileIndex & TILE_WIDTH_MASK) == minTileX) {
-					if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
-						return;
-					} else {
-						tileIndex += TILE_WIDTH;
-						goRight = !goRight;
-					}
-				} else {
-					--tileIndex;
-				}
+				// move left or right
+				tileIndex += xInc;
 			}
 		}
 	}
