@@ -16,11 +16,10 @@
 
 package grondag.bitraster;
 
-import static grondag.bitraster.Constants.TILE_ADDRESS_SHIFT_X;
-import static grondag.bitraster.Constants.TILE_ADDRESS_SHIFT_Y;
-import static grondag.bitraster.Constants.TILE_AXIS_MASK;
 import static grondag.bitraster.Constants.TILE_AXIS_SHIFT;
 import static grondag.bitraster.Constants.TILE_PIXEL_INDEX_MASK;
+import static grondag.bitraster.Constants.TILE_WIDTH_BITS;
+import static grondag.bitraster.Constants.TILE_WIDTH_MASK;
 
 abstract class Indexer {
 	private Indexer() {
@@ -34,11 +33,19 @@ abstract class Indexer {
 	}
 
 	static int tileIndex(int tileX, int tileY) {
-		return ((tileY & TILE_AXIS_MASK) << TILE_ADDRESS_SHIFT_Y) | ((tileX & TILE_AXIS_MASK) << TILE_ADDRESS_SHIFT_X) | ((tileY & TILE_PIXEL_INDEX_MASK) << TILE_AXIS_SHIFT) | (tileX & TILE_PIXEL_INDEX_MASK);
+		return tileX | (tileY << TILE_WIDTH_BITS);
 	}
 
-	static int lowIndexFromPixelXY(int x, int y) {
+	static int tileIndexFromPixelXY(int x, int y) {
 		return tileIndex(x >>> TILE_AXIS_SHIFT, y >>> TILE_AXIS_SHIFT);
+	}
+
+	static int tileOriginX(int tileIndex) {
+		return (tileIndex & TILE_WIDTH_MASK) << TILE_AXIS_SHIFT;
+	}
+
+	static int tileOriginY(int tileIndex) {
+		return (tileIndex >> TILE_WIDTH_BITS) << TILE_AXIS_SHIFT;
 	}
 
 	static int pixelIndex(int x, int y) {

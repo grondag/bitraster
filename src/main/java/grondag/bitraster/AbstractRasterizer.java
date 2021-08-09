@@ -136,13 +136,11 @@ import static grondag.bitraster.Constants.SCANT_PRECISE_PIXEL_CENTER;
 import static grondag.bitraster.Constants.TILE_AXIS_MASK;
 import static grondag.bitraster.Constants.TILE_AXIS_SHIFT;
 import static grondag.bitraster.Constants.TILE_COUNT;
-import static grondag.bitraster.Constants.TILE_INDEX_HIGH_X;
-import static grondag.bitraster.Constants.TILE_INDEX_HIGH_Y;
-import static grondag.bitraster.Constants.TILE_INDEX_LOW_X_MASK;
-import static grondag.bitraster.Constants.TILE_INDEX_LOW_Y;
-import static grondag.bitraster.Constants.TILE_INDEX_LOW_Y_MASK;
+import static grondag.bitraster.Constants.TILE_WIDTH;
 import static grondag.bitraster.Constants.VERTEX_DATA_LENGTH;
 import static grondag.bitraster.Indexer.tileIndex;
+import static grondag.bitraster.Indexer.tileOriginX;
+import static grondag.bitraster.Indexer.tileOriginY;
 
 // Some elements are adapted from content found at
 // https://fgiesen.wordpress.com/2013/02/17/optimizing-sw-occlusion-culling-index/
@@ -160,9 +158,7 @@ public abstract class AbstractRasterizer {
 	/** Classifies each edge, holding results of {@link #edgePosition(int, int, int, int)}. */
 	protected int pos0, pos1, pos2, pos3;
 
-	protected int minTileOriginX, maxTileOriginX, maxTileOriginY;
-	protected int tileIndex, tileOriginX, tileOriginY;
-	protected int saveTileIndex, saveTileOriginX, saveTileOriginY;
+	protected int saveTileIndex;
 	/** Control iteration in populateEvents_ methods. */
 	protected int eventY0, eventLimit;
 
@@ -645,43 +641,45 @@ public abstract class AbstractRasterizer {
 	}
 
 	final boolean isQuadPartiallyClear() {
-		final int minTileOriginX = this.minTileOriginX;
-		final int maxTileOriginX = this.maxTileOriginX;
-		final int maxTileOriginY = this.maxTileOriginY;
+		final int minTileOriginX = minPixelX & TILE_AXIS_MASK;
+		final int maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
+		final int maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
+		int tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
+
 		boolean goRight = true;
 
 		while (true) {
-			if (isQuadPartiallyClearInner()) {
+			if (isQuadPartiallyClearInner(tileIndex)) {
 				return true;
 			}
 
 			if (goRight) {
-				if (tileOriginX == maxTileOriginX) {
-					if (tileOriginY == maxTileOriginY) {
+				if (tileOriginX(tileIndex) == maxTileOriginX) {
+					if (tileOriginY(tileIndex) == maxTileOriginY) {
 						return false;
 					} else {
-						moveTileUp();
+						tileIndex += TILE_WIDTH;
 						goRight = !goRight;
 					}
 				} else {
-					moveTileRight();
+					++tileIndex;
 				}
 			} else {
-				if (tileOriginX == minTileOriginX) {
-					if (tileOriginY == maxTileOriginY) {
+				if (tileOriginX(tileIndex) == minTileOriginX) {
+					if (tileOriginY(tileIndex) == maxTileOriginY) {
 						return false;
 					} else {
-						moveTileUp();
+						tileIndex += TILE_WIDTH;
 						goRight = !goRight;
 					}
 				} else {
-					moveTileLeft();
+					--tileIndex;
 				}
 			}
 		}
 	}
 
-	final boolean isQuadPartiallyClearInner() {
+	final boolean isQuadPartiallyClearInner(int tileIndex) {
 		final long word = tiles[tileIndex];
 
 		// nothing to test if fully occluded
@@ -689,7 +687,7 @@ public abstract class AbstractRasterizer {
 			return false;
 		}
 
-		return (~word & computeTileCoverage()) != 0;
+		return (~word & computeTileCoverage(tileIndex)) != 0;
 	}
 
 	final boolean isQuadPartiallyOccluded(int v0, int v1, int v2, int v3) {
@@ -710,43 +708,44 @@ public abstract class AbstractRasterizer {
 	}
 
 	final boolean isQuadPartiallyOccluded() {
-		final int minTileOriginX = this.minTileOriginX;
-		final int maxTileOriginX = this.maxTileOriginX;
-		final int maxTileOriginY = this.maxTileOriginY;
+		final int minTileOriginX = minPixelX & TILE_AXIS_MASK;
+		final int maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
+		final int maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
+		int tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
 		boolean goRight = true;
 
 		while (true) {
-			if (isQuadPartiallyOccludedInner()) {
+			if (isQuadPartiallyOccludedInner(tileIndex)) {
 				return true;
 			}
 
 			if (goRight) {
-				if (tileOriginX == maxTileOriginX) {
-					if (tileOriginY == maxTileOriginY) {
+				if (tileOriginX(tileIndex) == maxTileOriginX) {
+					if (tileOriginY(tileIndex) == maxTileOriginY) {
 						return false;
 					} else {
-						moveTileUp();
+						tileIndex += TILE_WIDTH;
 						goRight = !goRight;
 					}
 				} else {
-					moveTileRight();
+					++tileIndex;
 				}
 			} else {
-				if (tileOriginX == minTileOriginX) {
-					if (tileOriginY == maxTileOriginY) {
+				if (tileOriginX(tileIndex) == minTileOriginX) {
+					if (tileOriginY(tileIndex) == maxTileOriginY) {
 						return false;
 					} else {
-						moveTileUp();
+						tileIndex += TILE_WIDTH;
 						goRight = !goRight;
 					}
 				} else {
-					moveTileLeft();
+					--tileIndex;
 				}
 			}
 		}
 	}
 
-	final boolean isQuadPartiallyOccludedInner() {
+	final boolean isQuadPartiallyOccludedInner(int tileIndex) {
 		final long word = tiles[tileIndex];
 
 		// nothing to test if fully clear
@@ -754,56 +753,51 @@ public abstract class AbstractRasterizer {
 			return false;
 		}
 
-		return (word & computeTileCoverage()) != 0;
+		return (word & computeTileCoverage(tileIndex)) != 0;
 	}
 
 	final void drawQuad() {
-		final int minTileOriginX = this.minTileOriginX;
-		final int maxTileOriginX = this.maxTileOriginX;
-		final int maxTileOriginY = this.maxTileOriginY;
+		final int minTileOriginX = minPixelX & TILE_AXIS_MASK;
+		final int maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
+		final int maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
+		int tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
 		boolean goRight = true;
 
 		while (true) {
-			drawQuadInner();
+			drawQuadInner(tileIndex);
 
 			if (goRight) {
-				if (tileOriginX == maxTileOriginX) {
-					if (tileOriginY == maxTileOriginY) {
+				if (tileOriginX(tileIndex) == maxTileOriginX) {
+					if (tileOriginY(tileIndex) == maxTileOriginY) {
 						return;
 					} else {
-						moveTileUp();
+						tileIndex += TILE_WIDTH;
 						goRight = !goRight;
 					}
 				} else {
-					moveTileRight();
+					++tileIndex;
 				}
 			} else {
-				if (tileOriginX == minTileOriginX) {
-					if (tileOriginY == maxTileOriginY) {
+				if (tileOriginX(tileIndex) == minTileOriginX) {
+					if (tileOriginY(tileIndex) == maxTileOriginY) {
 						return;
 					} else {
-						moveTileUp();
+						tileIndex += TILE_WIDTH;
 						goRight = !goRight;
 					}
 				} else {
-					moveTileLeft();
+					--tileIndex;
 				}
 			}
 		}
 	}
 
-	final void drawQuadInner() {
-		assert tileOriginY < PIXEL_HEIGHT;
-		assert tileOriginX < PIXEL_WIDTH;
-		assert tileOriginX >= 0;
-
-		final int tileIndex = this.tileIndex;
-
+	final void drawQuadInner(int tileIndex) {
 		long word = tiles[tileIndex];
 
 		// nothing to do if fully occluded
 		if (word != -1L) {
-			word |= computeTileCoverage();
+			word |= computeTileCoverage(tileIndex);
 			tiles[tileIndex] = word;
 		}
 	}
@@ -818,7 +812,7 @@ public abstract class AbstractRasterizer {
 
 			if (py == MAX_PIXEL_Y) return;
 
-			final int y1 = maxTileOriginY + 7;
+			final int y1 = (maxPixelY & TILE_AXIS_MASK) + 7;
 			final int start = py < 0 ? 0 : (py << 1);
 			final int limit = y1 << 1;
 
@@ -1422,65 +1416,13 @@ public abstract class AbstractRasterizer {
 		}
 	}
 
-	void moveTileRight() {
-		tileOriginX += 8;
-
-		if ((tileIndex & TILE_INDEX_LOW_X_MASK) == TILE_INDEX_LOW_X_MASK) {
-			tileIndex = (tileIndex & ~TILE_INDEX_LOW_X_MASK) + TILE_INDEX_HIGH_X;
-		} else {
-			++tileIndex;
-		}
-
-		assert tileIndex == tileIndex(tileOriginX >> TILE_AXIS_SHIFT, tileOriginY >> TILE_AXIS_SHIFT);
-		assert tileOriginX < PIXEL_WIDTH;
-	}
-
-	void moveTileLeft() {
-		tileOriginX -= 8;
-
-		if ((tileIndex & TILE_INDEX_LOW_X_MASK) == 0) {
-			tileIndex |= TILE_INDEX_LOW_X_MASK;
-			tileIndex -= TILE_INDEX_HIGH_X;
-		} else {
-			tileIndex -= 1;
-		}
-
-		assert tileIndex == tileIndex(tileOriginX >> TILE_AXIS_SHIFT, tileOriginY >> TILE_AXIS_SHIFT);
-		assert tileOriginX >= 0;
-	}
-
-	void moveTileUp() {
-		tileOriginY += 8;
-
-		if ((tileIndex & TILE_INDEX_LOW_Y_MASK) == TILE_INDEX_LOW_Y_MASK) {
-			tileIndex = (tileIndex & ~TILE_INDEX_LOW_Y_MASK) + TILE_INDEX_HIGH_Y;
-		} else {
-			tileIndex += TILE_INDEX_LOW_Y;
-		}
-
-		assert tileIndex == tileIndex(tileOriginX >> TILE_AXIS_SHIFT, tileOriginY >> TILE_AXIS_SHIFT);
-		assert tileOriginY < PIXEL_HEIGHT;
-	}
-
-	void pushTile() {
-		saveTileOriginX = tileOriginX;
-		saveTileOriginY = tileOriginY;
-		saveTileIndex = tileIndex;
-	}
-
-	void popTile() {
-		tileOriginX = saveTileOriginX;
-		tileOriginY = saveTileOriginY;
-		tileIndex = saveTileIndex;
-	}
-
-	long computeTileCoverage() {
+	long computeTileCoverage(int tileIndex) {
 		final int[] data = eventData;
 
-		int y = tileOriginY << 1;
-		final int tx = tileOriginX;
+		int y = tileOriginY(tileIndex) << 1;
+		final int tx = tileOriginX(tileIndex);
 
-		final int baseX = tileOriginX + 7;
+		final int baseX = tx + 7;
 
 		long mask = 0;
 
@@ -1602,15 +1544,15 @@ public abstract class AbstractRasterizer {
 	}
 
 	public boolean isPixelClear(int x, int y) {
-		return (tiles[Indexer.lowIndexFromPixelXY(x, y)] & (1L << (Indexer.pixelIndex(x, y)))) == 0;
+		return (tiles[Indexer.tileIndexFromPixelXY(x, y)] & (1L << (Indexer.pixelIndex(x, y)))) == 0;
 	}
 
 	public boolean isPixelSet(int x, int y) {
-		return (tiles[Indexer.lowIndexFromPixelXY(x, y)] & (1L << (Indexer.pixelIndex(x, y)))) != 0;
+		return (tiles[Indexer.tileIndexFromPixelXY(x, y)] & (1L << (Indexer.pixelIndex(x, y)))) != 0;
 	}
 
 	void drawPixel(int x, int y) {
-		tiles[Indexer.lowIndexFromPixelXY(x, y)] |= (1L << (Indexer.pixelIndex(x, y)));
+		tiles[Indexer.tileIndexFromPixelXY(x, y)] |= (1L << (Indexer.pixelIndex(x, y)));
 	}
 
 	@FunctionalInterface
@@ -1735,14 +1677,6 @@ public abstract class AbstractRasterizer {
 		final int maxPixelX = ((maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 		final int maxPixelY = ((maxY + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 
-		minTileOriginX = minPixelX & TILE_AXIS_MASK;
-		maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
-		maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
-
-		tileOriginX = minPixelX & TILE_AXIS_MASK;
-		tileOriginY = minPixelY & TILE_AXIS_MASK;
-		tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
-
 		final int position0 = edgePosition(ax0, ay0, ax1, ay1);
 		final int position1 = edgePosition(bx0, by0, bx1, by1);
 		final int position2 = edgePosition(cx0, cy0, cx1, cy1);
@@ -1784,7 +1718,7 @@ public abstract class AbstractRasterizer {
 
 	void prepareEvents(int eventKey) {
 		eventY0 = minPixelY & TILE_AXIS_MASK;
-		eventLimit = ((maxTileOriginY + 7) << 1);
+		eventLimit = (((maxPixelY & TILE_AXIS_MASK) + 7) << 1);
 		EVENT_FILLERS[eventKey].apply();
 	}
 }

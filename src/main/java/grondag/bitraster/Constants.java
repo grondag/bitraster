@@ -34,9 +34,9 @@ public class Constants {
 	static final int PRECISE_PIXEL_SIZE = 1 << PRECISION_BITS;
 	static final int PRECISE_PIXEL_CENTER = PRECISE_PIXEL_SIZE / 2;
 	static final int SCANT_PRECISE_PIXEL_CENTER = PRECISE_PIXEL_CENTER - 1;
-	static final int TILE_WIDTH = 256;
-	static final int TILE_WIDTH_BITS = Integer.bitCount(TILE_WIDTH - 1);
-	static final int TILE_ADDRESS_SHIFT_X = TILE_AXIS_SHIFT; // starts at 6 bits, but bottom 3 are part of low 6 bits
+	static final int TILE_WIDTH_BITS = 8;
+	static final int TILE_WIDTH = 1 << TILE_WIDTH_BITS;
+	static final int TILE_WIDTH_MASK = TILE_WIDTH - 1;
 	public static final int PIXEL_WIDTH = TILE_WIDTH * TILE_PIXEL_DIAMETER;
 	static final int MAX_PIXEL_X = PIXEL_WIDTH - 1;
 	static final int HALF_PIXEL_WIDTH = PIXEL_WIDTH / 2;
@@ -48,8 +48,8 @@ public class Constants {
 	 * clamp to this to ensure value + half pixel rounds down to last pixel.
 	 */
 	static final int PRECISE_WIDTH_CLAMP = PRECISE_WIDTH - PRECISE_PIXEL_CENTER;
-	static final int TILE_HEIGHT = 256;
-	static final int TILE_ADDRESS_SHIFT_Y = TILE_ADDRESS_SHIFT_X + TILE_WIDTH_BITS - TILE_AXIS_SHIFT;
+	static final int TILE_HEIGHT_BITS = 8;
+	static final int TILE_HEIGHT = 1 << TILE_HEIGHT_BITS;
 	public static final int PIXEL_HEIGHT = TILE_HEIGHT * TILE_PIXEL_DIAMETER;
 	static final int MAX_PIXEL_Y = PIXEL_HEIGHT - 1;
 	static final int HALF_PIXEL_HEIGHT = PIXEL_HEIGHT / 2;
@@ -62,11 +62,6 @@ public class Constants {
 	 * clamp to this to ensure value + half pixel rounds down to last pixel.
 	 */
 	static final int PRECISE_HEIGHT_CLAMP = PRECISE_HEIGHT - PRECISE_PIXEL_CENTER;
-	static final int TILE_INDEX_LOW_Y_MASK = TILE_PIXEL_INDEX_MASK << TILE_AXIS_SHIFT;
-	static final int TILE_INDEX_LOW_X_MASK = TILE_PIXEL_INDEX_MASK;
-	static final int TILE_INDEX_LOW_Y = 1 << TILE_AXIS_SHIFT;
-	static final int TILE_INDEX_HIGH_Y = TILE_INDEX_LOW_Y << TILE_ADDRESS_SHIFT_Y;
-	static final int TILE_INDEX_HIGH_X = TILE_INDEX_LOW_Y << TILE_ADDRESS_SHIFT_X;
 	static final int GUARD_SIZE = 512 << PRECISION_BITS;
 	static final int GUARD_MAX = PRECISE_WIDTH + GUARD_SIZE;
 	static final int GUARD_MIN = -GUARD_SIZE;

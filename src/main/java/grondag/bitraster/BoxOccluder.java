@@ -1051,9 +1051,9 @@ public abstract class BoxOccluder {
 			outcome |= NORTH;
 		}
 
-		timer.start();
-		final boolean result = partiallyClearTests[outcome].apply(x0, y0, z0, x1, y1, z1);
-		timer.stop(false);
+		//timer.start();
+		//final boolean result = partiallyClearTests[outcome].apply(x0, y0, z0, x1, y1, z1);
+		//timer.stop(false);
 
 		//final int size = (raster.maxPixelY - raster.minPixelY) * (raster.maxPixelX - raster.minPixelX);
 
@@ -1066,8 +1066,8 @@ public abstract class BoxOccluder {
 		// Small to moderate are 80% of elapsed time, doesn't seem to be much variation in time
 		//timer.stop(size < 100000);
 
-		return result;
-		//return partiallyClearTests[outcome].apply(x0, y0, z0, x1, y1, z1);
+		//return result;
+		return partiallyClearTests[outcome].apply(x0, y0, z0, x1, y1, z1);
 	}
 
 	public final boolean isEmptyRegionVisible(int originX, int originY, int originZ, int fuzz) {
@@ -1158,7 +1158,9 @@ public abstract class BoxOccluder {
 			}
 		}
 
+		timer.start();
 		boxDraws[outcome].apply(x0, y0, z0, x1, y1, z1);
+		timer.stop(false);
 	}
 
 	public final void occlude(int[] visData) {

@@ -49,9 +49,6 @@ import static grondag.bitraster.Constants.PV_X;
 import static grondag.bitraster.Constants.PV_Y;
 import static grondag.bitraster.Constants.PV_Z;
 import static grondag.bitraster.Constants.SCANT_PRECISE_PIXEL_CENTER;
-import static grondag.bitraster.Constants.TILE_AXIS_MASK;
-import static grondag.bitraster.Constants.TILE_AXIS_SHIFT;
-import static grondag.bitraster.Indexer.tileIndex;
 
 public final class PerspectiveRasterizer extends AbstractRasterizer {
 	/** Holds results of {@link #clipNear(int, int)}. */
@@ -270,14 +267,6 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final int maxPixelX = ((maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 		final int maxPixelY = ((maxY + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 
-		minTileOriginX = minPixelX & TILE_AXIS_MASK;
-		maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
-		maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
-
-		tileOriginX = minPixelX & TILE_AXIS_MASK;
-		tileOriginY = minPixelY & TILE_AXIS_MASK;
-		tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
-
 		final int position0 = edgePosition(ax0, ay0, ax1, ay1);
 		final int position1 = edgePosition(bx0, by0, bx1, by1);
 		final int position2 = edgePosition(cx0, cy0, cx1, cy1);
@@ -439,14 +428,6 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final int maxPixelX = ((maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 		final int maxPixelY = ((maxY + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 
-		minTileOriginX = minPixelX & TILE_AXIS_MASK;
-		maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
-		maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
-
-		tileOriginX = minPixelX & TILE_AXIS_MASK;
-		tileOriginY = minPixelY & TILE_AXIS_MASK;
-		tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
-
 		final int position0 = edgePosition(ax0, ay0, ax1, ay1);
 		final int position1 = edgePosition(bx0, by0, bx1, by1);
 		final int position2 = edgePosition(cx0, cy0, cx1, cy1);
@@ -597,14 +578,6 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final int maxPixelX = ((maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 		final int maxPixelY = ((maxY + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 
-		minTileOriginX = minPixelX & TILE_AXIS_MASK;
-		maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
-		maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
-
-		tileOriginX = minPixelX & TILE_AXIS_MASK;
-		tileOriginY = minPixelY & TILE_AXIS_MASK;
-		tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
-
 		final int position0 = edgePosition(ax0, ay0, ax1, ay1);
 		final int position1 = edgePosition(bx0, by0, bx1, by1);
 		final int position2 = edgePosition(cx0, cy0, cx1, cy1);
@@ -740,14 +713,6 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 		final int minPixelY = ((minY + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 		final int maxPixelX = ((maxX + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 		final int maxPixelY = ((maxY + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
-
-		minTileOriginX = minPixelX & TILE_AXIS_MASK;
-		maxTileOriginX = maxPixelX & TILE_AXIS_MASK;
-		maxTileOriginY = maxPixelY & TILE_AXIS_MASK;
-
-		tileOriginX = minPixelX & TILE_AXIS_MASK;
-		tileOriginY = minPixelY & TILE_AXIS_MASK;
-		tileIndex = tileIndex(minPixelX >> TILE_AXIS_SHIFT, minPixelY >> TILE_AXIS_SHIFT);
 
 		final int position0 = edgePosition(ax0, ay0, ax1, ay1);
 		final int position1 = edgePosition(bx0, by0, bx1, by1);
