@@ -102,7 +102,6 @@ import static grondag.bitraster.Constants.EVENT_0123_RRLR;
 import static grondag.bitraster.Constants.EVENT_0123_RRRF;
 import static grondag.bitraster.Constants.EVENT_0123_RRRL;
 import static grondag.bitraster.Constants.EVENT_0123_RRRR;
-import static grondag.bitraster.Constants.EVENT_DATA_LENGTH;
 import static grondag.bitraster.Constants.EVENT_POSITION_MASK;
 import static grondag.bitraster.Constants.HALF_PIXEL_HEIGHT;
 import static grondag.bitraster.Constants.HALF_PIXEL_WIDTH;
@@ -153,7 +152,8 @@ import static grondag.bitraster.Matrix4L.MATRIX_PRECISION_HALF;
 public abstract class AbstractRasterizer {
 	final Matrix4L mvpMatrix = new Matrix4L();
 	final int[] vertexData = new int[VERTEX_DATA_LENGTH];
-	final int[] eventData = new int[EVENT_DATA_LENGTH];
+	final int[] rightEvents = new int[PIXEL_HEIGHT];
+	final int[] leftEvents = new int[PIXEL_HEIGHT];
 	final long[] tiles = new long[TILE_COUNT];
 	final EventFiller[] EVENT_FILLERS = new EventFiller[0x1000];
 
@@ -167,7 +167,7 @@ public abstract class AbstractRasterizer {
 	protected int tileIndex, tileOriginX, tileOriginY;
 	protected int saveTileIndex, saveTileOriginX, saveTileOriginY;
 	/** Control iteration in populateEvents_ methods. */
-	protected int eventY0, eventLimit;
+	protected int eventY0, eventY1;
 
 	{
 		EVENT_FILLERS[EVENT_0123_RRRR] = () -> {
@@ -611,7 +611,8 @@ public abstract class AbstractRasterizer {
 	final void copyFrom(AbstractRasterizer source) {
 		mvpMatrix.copyFrom(source.mvpMatrix);
 		System.arraycopy(source.vertexData, 0, vertexData, 0, VERTEX_DATA_LENGTH);
-		System.arraycopy(source.eventData, 0, eventData, 0, EVENT_DATA_LENGTH);
+		System.arraycopy(source.leftEvents, 0, leftEvents, 0, PIXEL_HEIGHT);
+		System.arraycopy(source.rightEvents, 0, rightEvents, 0, PIXEL_HEIGHT);
 		System.arraycopy(source.tiles, 0, tiles, 0, TILE_COUNT);
 	}
 
@@ -814,7 +815,8 @@ public abstract class AbstractRasterizer {
 	abstract int prepareBounds(int v0, int v1, int v2, int v3);
 
 	private void populateFlatEvents(int position, int y0In) {
-		final int[] eventData = this.eventData;
+		final int[] leftEvents = this.leftEvents;
+		final int[] rightEvents = this.rightEvents;
 
 		if (position == EDGE_TOP) {
 			final int py = ((y0In + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) + 1;
@@ -822,14 +824,13 @@ public abstract class AbstractRasterizer {
 			if (py == MAX_PIXEL_Y) return;
 
 			final int y1 = maxTileOriginY + 7;
-			final int start = py < 0 ? 0 : (py << 1);
-			final int limit = y1 << 1;
+			final int y0 = py < 0 ? 0 : py;
 
-			assert limit < EVENT_DATA_LENGTH;
+			assert y1 < PIXEL_HEIGHT;
 
-			for (int y = start; y <= limit; ) {
-				eventData[y++] = PIXEL_WIDTH;
-				eventData[y++] = -1;
+			for (int y = y0; y <= y1; ++y) {
+				leftEvents[y] = PIXEL_WIDTH;
+				rightEvents[y] = -1;
 			}
 		} else if (position == EDGE_BOTTOM) {
 			final int py = (y0In >> PRECISION_BITS);
@@ -837,14 +838,13 @@ public abstract class AbstractRasterizer {
 			if (py == 0) return;
 
 			final int y0 = minPixelY & TILE_AXIS_MASK;
-			final int start = y0 << 1;
-			final int limit = py > MAX_PIXEL_Y ? (MAX_PIXEL_Y << 1) : (py << 1);
+			final int y1 = py > MAX_PIXEL_Y ? MAX_PIXEL_Y : py;
 
-			assert limit < EVENT_DATA_LENGTH;
+			assert y1 < PIXEL_HEIGHT;
 
-			for (int y = start; y < limit; ) {
-				eventData[y++] = PIXEL_WIDTH;
-				eventData[y++] = -1;
+			for (int y = y0; y < y1; ++y) {
+				leftEvents[y] = PIXEL_WIDTH;
+				rightEvents[y] = -1;
 			}
 		} else {
 			assert position == EDGE_POINT;
@@ -855,12 +855,11 @@ public abstract class AbstractRasterizer {
 	 * Puts left edge at screen boundary.
 	 */
 	private void populateLeftEvents() {
-		final int[] eventData = this.eventData;
-		final int y0 = eventY0;
-		final int limit = eventLimit;
+		final int[] events = leftEvents;
+		final int limit = eventY1;
 
-		for (int y = y0 << 1; y <= limit; y += 2) {
-			eventData[y] = 0;
+		for (int y = eventY0; y <= limit; ++y) {
+			events[y] = 0;
 		}
 	}
 
@@ -871,17 +870,16 @@ public abstract class AbstractRasterizer {
 		final int ax1 = vertexData[a + 2];
 		final int ay1 = vertexData[a + 3];
 
-		final int[] eventData = this.eventData;
+		final int[] events = leftEvents;
 		final int y0 = eventY0;
-		final int limit = eventLimit;
+		final int y1 = eventY1;
 		final int dx = ax1 - ax0;
-
 
 		if (dx == 0) {
 			final int x = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS);
 
-			for (int y = (y0 << 1); y <= limit; y += 2) {
-				eventData[y] = x;
+			for (int y = y0; y <= y1; ++y) {
+				events[y] = x;
 			}
 		} else {
 			final int dy = ay1 - ay0;
@@ -889,22 +887,20 @@ public abstract class AbstractRasterizer {
 			long nStep = n << PRECISION_BITS;
 			long x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x100000L;
 
-			for (int y = (y0 << 1); y <= limit; y += 2) {
-				eventData[y] = (int) (x >> 20);
+			for (int y = y0; y <= y1; ++y) {
+				events[y] = (int) (x >> 20);
 				x += nStep;
 			}
 		}
 	}
 
 	private void populateRightEvents() {
-		final int[] eventData = this.eventData;
-		final int y0 = eventY0;
-		// difference from left: is high index in pairs
-		final int limit = eventLimit + 1;
+		final int[] events = rightEvents;
+		final int y1 = eventY1;
 
 		// difference from left: is high index in pairs
-		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
-			eventData[y] = PIXEL_WIDTH;
+		for (int y = eventY0; y <= y1; ++y) {
+			events[y] = PIXEL_WIDTH;
 		}
 	}
 
@@ -916,19 +912,16 @@ public abstract class AbstractRasterizer {
 		final int ax1 = vertexData[a + 2];
 		final int ay1 = vertexData[a + 3];
 
-		final int[] eventData = this.eventData;
+		final int[] events = rightEvents;
 		final int y0 = eventY0;
-		// difference from left: is high index in pairs
-		final int limit = eventLimit + 1;
+		final int y1 = eventY1;
 		final int dx = ax1 - ax0;
-
 
 		if (dx == 0) {
 			final int x = (ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
 
-			// difference from left: is high index in pairs
-			for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
-				eventData[y] = x;
+			for (int y = y0; y <= y1; ++y) {
+				events[y] = x;
 			}
 		} else {
 			final int dy = ay1 - ay0;
@@ -938,8 +931,8 @@ public abstract class AbstractRasterizer {
 			long x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x7FFFFL;
 
 			// difference from left: is high index in pairs
-			for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
-				eventData[y] = (int) (x >> 20);
+			for (int y = y0; y <= y1; ++y) {
+				events[y] = (int) (x >> 20);
 				x += nStep;
 			}
 		}
@@ -958,9 +951,9 @@ public abstract class AbstractRasterizer {
 		final int bx1 = vertexData[b + 2];
 		final int by1 = vertexData[b + 3];
 
-		final int[] eventData = this.eventData;
+		final int[] events = leftEvents;
 		final int y0 = eventY0;
-		final int limit = eventLimit;
+		final int y1 = eventY1;
 
 		final long aStep;
 		long ax;
@@ -989,10 +982,10 @@ public abstract class AbstractRasterizer {
 			bx = ((long) bx0 << 16) - bn * by0 + bStep * y0 + 0x100000L;
 		}
 
-		for (int y = (y0 << 1); y <= limit; y += 2) {
+		for (int y = y0; y <= y1; ++y) {
 			final long x = ax > bx ? ax : bx;
 
-			eventData[y] = (int) (x >> 20);
+			events[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1017,9 +1010,9 @@ public abstract class AbstractRasterizer {
 		final int cx1 = vertexData[c + 2];
 		final int cy1 = vertexData[c + 3];
 
-		final int[] eventData = this.eventData;
+		final int[] events = leftEvents;
 		final int y0 = eventY0;
-		final int limit = eventLimit;
+		final int y1 = eventY1;
 
 		final long aStep;
 		long ax;
@@ -1061,11 +1054,11 @@ public abstract class AbstractRasterizer {
 			cx = ((long) cx0 << 16) - cn * cy0 + cStep * y0 + 0x100000L;
 		}
 
-		for (int y = (y0 << 1); y <= limit; y += 2) {
+		for (int y = y0; y <= y1; ++y) {
 			long x = ax > bx ? ax : bx;
 			if (cx > x) x = cx;
 
-			eventData[y] = (int) (x >> 20);
+			events[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1096,9 +1089,9 @@ public abstract class AbstractRasterizer {
 		final int dx1 = vertexData[d + 2];
 		final int dy1 = vertexData[d + 3];
 
-		final int[] eventData = this.eventData;
+		final int[] events = leftEvents;
 		final int y0 = eventY0;
-		final int limit = eventLimit;
+		final int y1 = eventY1;
 
 		final long aStep;
 		long ax;
@@ -1153,12 +1146,12 @@ public abstract class AbstractRasterizer {
 			dx = ((long) dx0 << 16) - dn * dy0 + dStep * y0 + 0x100000L;
 		}
 
-		for (int y = (y0 << 1); y <= limit; y += 2) {
+		for (int y = y0; y <= y1; ++y) {
 			long x = ax > bx ? ax : bx;
 			if (cx > x) x = cx;
 			if (dx > x) x = dx;
 
-			eventData[y] = (int) (x >> 20);
+			events[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1180,10 +1173,9 @@ public abstract class AbstractRasterizer {
 		final int bx1 = vertexData[b + 2];
 		final int by1 = vertexData[b + 3];
 
-		final int[] eventData = this.eventData;
+		final int[] events = rightEvents;
 		final int y0 = eventY0;
-		// difference from left: is high index in pairs
-		final int limit = eventLimit + 1;
+		final int y1 = eventY1;
 
 		final long aStep;
 		long ax;
@@ -1214,12 +1206,11 @@ public abstract class AbstractRasterizer {
 			bx = ((long) bx0 << 16) - bn * by0 + bStep * y0 + 0x7FFFFL;
 		}
 
-		// difference from left: is high index in pairs
-		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
+		for (int y = y0; y <= y1; ++y) {
 			// difference from left: lower value wins
 			final long x = ax < bx ? ax : bx;
 
-			eventData[y] = (int) (x >> 20);
+			events[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1244,10 +1235,9 @@ public abstract class AbstractRasterizer {
 		final int cx1 = vertexData[c + 2];
 		final int cy1 = vertexData[c + 3];
 
-		final int[] eventData = this.eventData;
+		final int[] events = rightEvents;
 		final int y0 = eventY0;
-		// difference from left: is high index in pairs
-		final int limit = eventLimit + 1;
+		final int y1 = eventY1;
 
 		final long aStep;
 		long ax;
@@ -1292,14 +1282,13 @@ public abstract class AbstractRasterizer {
 			cx = ((long) cx0 << 16) - cn * cy0 + cStep * y0 + 0x7FFFFL;
 		}
 
-		// difference from left: is high index in pairs
-		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
+		for (int y = y0; y <= y1; ++y) {
 			// difference from left: lower value wins
 			long x = ax < bx ? ax : bx;
 
 			if (cx < x) x = cx;
 
-			eventData[y] = (int) (x >> 20);
+			events[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1330,10 +1319,9 @@ public abstract class AbstractRasterizer {
 		final int dx1 = vertexData[d + 2];
 		final int dy1 = vertexData[d + 3];
 
-		final int[] eventData = this.eventData;
+		final int[] events = rightEvents;
 		final int y0 = eventY0;
-		// difference from left: is high index in pairs
-		final int limit = eventLimit + 1;
+		final int y1 = eventY1;
 
 		final long aStep;
 		long ax;
@@ -1392,15 +1380,14 @@ public abstract class AbstractRasterizer {
 			dx = ((long) dx0 << 16) - dn * dy0 + dStep * y0 + 0x7FFFFL;
 		}
 
-		// difference from left: is high index in pairs
-		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
+		for (int y = y0; y <= y1; ++y) {
 			// difference from left: lower value wins
 			long x = ax < bx ? ax : bx;
 
 			if (cx < x) x = cx;
 			if (dx < x) x = dx;
 
-			eventData[y] = (int) (x >> 20);
+			events[y] = (int) (x >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1479,17 +1466,18 @@ public abstract class AbstractRasterizer {
 	}
 
 	long computeTileCoverage() {
-		final int[] data = eventData;
+		final int[] left = leftEvents;
+		final int[] right = rightEvents;
 
-		int y = tileOriginY << 1;
+		int y = tileOriginY;
 		final int tx = tileOriginX;
 
 		final int baseX = tileOriginX + 7;
 
 		long mask = 0;
 
-		int leftX = data[y] - tx;
-		int rightX = baseX - data[++y];
+		int leftX = left[y] - tx;
+		int rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1501,8 +1489,8 @@ public abstract class AbstractRasterizer {
 			mask = m;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1514,8 +1502,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 8;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1527,8 +1515,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 16;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1540,8 +1528,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 24;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1553,8 +1541,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 32;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1566,8 +1554,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 40;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1579,8 +1567,8 @@ public abstract class AbstractRasterizer {
 			mask |= m << 48;
 		}
 
-		leftX = data[++y] - tx;
-		rightX = baseX - data[++y];
+		leftX = left[++y] - tx;
+		rightX = baseX - right[y];
 
 		if (leftX < 8 && rightX < 8) {
 			long m = leftX <= 0 ? 0xFF : ((0xFF << leftX) & 0xFF);
@@ -1812,7 +1800,7 @@ public abstract class AbstractRasterizer {
 
 	void prepareEvents(int eventKey) {
 		eventY0 = minPixelY & TILE_AXIS_MASK;
-		eventLimit = ((maxTileOriginY + 7) << 1);
+		eventY1 = maxTileOriginY + 7;
 		EVENT_FILLERS[eventKey].apply();
 	}
 }
