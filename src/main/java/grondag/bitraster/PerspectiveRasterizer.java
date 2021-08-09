@@ -233,10 +233,6 @@ public final class PerspectiveRasterizer extends AbstractRasterizer {
 			maxY = dy0;
 		}
 
-		if (((maxY - 1) | (maxX - 1) | (PRECISE_HEIGHT - 1 - minY) | (PRECISE_WIDTH - 1 - minX)) < 0) {
-			// NOOP?  TODO: why is this here?
-		}
-
 		if (maxY <= 0 || minY >= PRECISE_HEIGHT) {
 			return BOUNDS_OUTSIDE_OR_TOO_SMALL;
 		}

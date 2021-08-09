@@ -1010,7 +1010,7 @@ public abstract class BoxOccluder {
 
 	final MicroTimer timer = new MicroTimer("boxTests.apply", 500000);
 
-	public abstract boolean isBoxVisible(int packedBox);
+	public abstract boolean isBoxVisible(int packedBox, int fuzz);
 
 	/**
 	 * Does not rely on winding order but instead the distance from
@@ -1018,13 +1018,13 @@ public abstract class BoxOccluder {
 	 *
 	 * <p>Not suitable for orthographic perspective.
 	 */
-	protected final boolean isBoxVisibleFromPerspective(int packedBox) {
-		final int x0 = PackedBox.x0(packedBox) - 1;
-		final int y0 = PackedBox.y0(packedBox) - 1;
-		final int z0 = PackedBox.z0(packedBox) - 1;
-		final int x1 = PackedBox.x1(packedBox) + 1;
-		final int y1 = PackedBox.y1(packedBox) + 1;
-		final int z1 = PackedBox.z1(packedBox) + 1;
+	protected final boolean isBoxVisibleFromPerspective(int packedBox, int fuzz) {
+		final int x0 = PackedBox.x0(packedBox) - fuzz;
+		final int y0 = PackedBox.y0(packedBox) - fuzz;
+		final int z0 = PackedBox.z0(packedBox) - fuzz;
+		final int x1 = PackedBox.x1(packedBox) + fuzz;
+		final int y1 = PackedBox.y1(packedBox) + fuzz;
+		final int z1 = PackedBox.z1(packedBox) + fuzz;
 
 		final int offsetX = this.offsetX;
 		final int offsetY = this.offsetY;
@@ -1070,9 +1070,9 @@ public abstract class BoxOccluder {
 		//return partiallyClearTests[outcome].apply(x0, y0, z0, x1, y1, z1);
 	}
 
-	public final boolean isEmptyRegionVisible(int originX, int originY, int originZ) {
+	public final boolean isEmptyRegionVisible(int originX, int originY, int originZ, int fuzz) {
 		prepareRegion(originX, originY, originZ, 0, 0);
-		return isBoxVisible(PackedBox.FULL_BOX);
+		return isBoxVisible(PackedBox.FULL_BOX, fuzz);
 	}
 
 	/**

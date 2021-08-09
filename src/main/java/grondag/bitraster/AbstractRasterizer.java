@@ -104,8 +104,6 @@ import static grondag.bitraster.Constants.EVENT_0123_RRRL;
 import static grondag.bitraster.Constants.EVENT_0123_RRRR;
 import static grondag.bitraster.Constants.EVENT_DATA_LENGTH;
 import static grondag.bitraster.Constants.EVENT_POSITION_MASK;
-import static grondag.bitraster.Constants.HALF_PIXEL_HEIGHT;
-import static grondag.bitraster.Constants.HALF_PIXEL_WIDTH;
 import static grondag.bitraster.Constants.IDX_AX0;
 import static grondag.bitraster.Constants.IDX_AX1;
 import static grondag.bitraster.Constants.IDX_AY0;
@@ -145,7 +143,6 @@ import static grondag.bitraster.Constants.TILE_INDEX_LOW_Y;
 import static grondag.bitraster.Constants.TILE_INDEX_LOW_Y_MASK;
 import static grondag.bitraster.Constants.VERTEX_DATA_LENGTH;
 import static grondag.bitraster.Indexer.tileIndex;
-import static grondag.bitraster.Matrix4L.MATRIX_PRECISION_HALF;
 
 // Some elements are adapted from content found at
 // https://fgiesen.wordpress.com/2013/02/17/optimizing-sw-occlusion-culling-index/
@@ -1602,30 +1599,6 @@ public abstract class AbstractRasterizer {
 		//}
 
 		return mask;
-	}
-
-	/**
-	 * For early exit testing.
-	 *
-	 * @param x
-	 * @param y
-	 * @param z
-	 * @return
-	 */
-	boolean isPointVisible(int x, int y, int z) {
-		final Matrix4L mvpMatrix = this.mvpMatrix;
-
-		final long w = mvpMatrix.transformVec4W(x, y, z);
-		final long tz = mvpMatrix.transformVec4Z(x, y, z);
-
-		if (w <= 0 || tz < 0 || tz > w) {
-			return false;
-		}
-
-		final int px = (int) (HALF_PIXEL_WIDTH + (MATRIX_PRECISION_HALF + HALF_PIXEL_WIDTH * mvpMatrix.transformVec4X(x, y, z)) / w);
-		final int py = (int) (HALF_PIXEL_HEIGHT + (MATRIX_PRECISION_HALF + HALF_PIXEL_HEIGHT * mvpMatrix.transformVec4Y(x, y, z)) / w);
-
-		return px >= 0 && py >= 0 && px < PIXEL_WIDTH && py < PIXEL_HEIGHT && isPixelClear(px, py);
 	}
 
 	public boolean isPixelClear(int x, int y) {

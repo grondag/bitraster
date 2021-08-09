@@ -49,7 +49,6 @@ public class Constants {
 	 */
 	static final int PRECISE_WIDTH_CLAMP = PRECISE_WIDTH - PRECISE_PIXEL_CENTER;
 	static final int TILE_HEIGHT = 256;
-	//static final int TILE_HEIGHT_BITS = Integer.bitCount(TILE_HEIGHT - 1);
 	static final int TILE_ADDRESS_SHIFT_Y = TILE_ADDRESS_SHIFT_X + TILE_WIDTH_BITS - TILE_AXIS_SHIFT;
 	public static final int PIXEL_HEIGHT = TILE_HEIGHT * TILE_PIXEL_DIAMETER;
 	static final int MAX_PIXEL_Y = PIXEL_HEIGHT - 1;
