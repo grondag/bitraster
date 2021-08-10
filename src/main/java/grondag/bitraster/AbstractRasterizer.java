@@ -828,8 +828,7 @@ public abstract class AbstractRasterizer {
 				eventData[y] = x;
 			}
 		} else {
-			final int dy = ay1 - ay0;
-			final long n = (dx << 16) / dy;
+			final long n = (dx << 16) / (ay1 - ay0);
 			final long nStep = n << PRECISION_BITS;
 			long x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x100000L;
 
@@ -866,7 +865,6 @@ public abstract class AbstractRasterizer {
 		final int limit = eventLimit + 1;
 		final int dx = ax1 - ax0;
 
-
 		if (dx == 0) {
 			final int x = (ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS;
 
@@ -875,8 +873,7 @@ public abstract class AbstractRasterizer {
 				eventData[y] = x;
 			}
 		} else {
-			final int dy = ay1 - ay0;
-			final long n = (((long) dx) << 16) / dy;
+			final long n = (((long) dx) << 16) / (ay1 - ay0);
 			final long nStep = n << PRECISION_BITS;
 			// difference from left: rounding looses tie
 			long x = ((long) ax0 << 16) - n * ay0 + nStep * y0 + 0x7FFFFL;
@@ -906,18 +903,14 @@ public abstract class AbstractRasterizer {
 		final int y0 = eventY0;
 		final int limit = eventLimit;
 
-		final long aStep;
-		long ax;
-		final long bStep;
-		long bx;
+		final long aStep, bStep;
+		long ax, bx;
 
 		if (ax0 == ax1) {
 			ax = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			aStep = 0;
 		} else {
-			final int ady = ay1 - ay0;
-			final int adx = ax1 - ax0;
-			final long an = (((long) adx) << 16) / ady;
+			final long an = (((long) (ax1 - ax0)) << 16) / (ay1 - ay0);
 			aStep = an << PRECISION_BITS;
 			ax = ((long) ax0 << 16) - an * ay0 + aStep * y0 + 0x100000L;
 		}
@@ -926,9 +919,7 @@ public abstract class AbstractRasterizer {
 			bx = ((bx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			bStep = 0;
 		} else {
-			final int bdx = bx1 - bx0;
-			final int bdy = by1 - by0;
-			final long bn = (((long) bdx) << 16) / bdy;
+			final long bn = (((long) (bx1 - bx0)) << 16) / (by1 - by0);
 			bStep = bn << PRECISION_BITS;
 			bx = ((long) bx0 << 16) - bn * by0 + bStep * y0 + 0x100000L;
 		}
@@ -965,20 +956,14 @@ public abstract class AbstractRasterizer {
 		final int y0 = eventY0;
 		final int limit = eventLimit;
 
-		final long aStep;
-		long ax;
-		final long bStep;
-		long bx;
-		final long cStep;
-		long cx;
+		final long aStep, bStep, cStep;
+		long ax, bx, cx;
 
 		if (ax0 == ax1) {
 			ax = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			aStep = 0;
 		} else {
-			final int ady = ay1 - ay0;
-			final int adx = ax1 - ax0;
-			final long an = (((long) adx) << 16) / ady;
+			final long an = (((long) (ax1 - ax0)) << 16) / (ay1 - ay0);
 			aStep = an << PRECISION_BITS;
 			ax = ((long) ax0 << 16) - an * ay0 + aStep * y0 + 0x100000L;
 		}
@@ -987,9 +972,7 @@ public abstract class AbstractRasterizer {
 			bx = ((bx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			bStep = 0;
 		} else {
-			final int bdx = bx1 - bx0;
-			final int bdy = by1 - by0;
-			final long bn = (((long) bdx) << 16) / bdy;
+			final long bn = (((long) (bx1 - bx0)) << 16) / (by1 - by0);
 			bStep = bn << PRECISION_BITS;
 			bx = ((long) bx0 << 16) - bn * by0 + bStep * y0 + 0x100000L;
 		}
@@ -998,9 +981,7 @@ public abstract class AbstractRasterizer {
 			cx = ((cx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			cStep = 0;
 		} else {
-			final int cdx = cx1 - cx0;
-			final int cdy = cy1 - cy0;
-			final long cn = (((long) cdx) << 16) / cdy;
+			final long cn = (((long) (cx1 - cx0)) << 16) / (cy1 - cy0);
 			cStep = cn << PRECISION_BITS;
 			cx = ((long) cx0 << 16) - cn * cy0 + cStep * y0 + 0x100000L;
 		}
@@ -1044,22 +1025,14 @@ public abstract class AbstractRasterizer {
 		final int y0 = eventY0;
 		final int limit = eventLimit;
 
-		final long aStep;
-		long ax;
-		final long bStep;
-		long bx;
-		final long cStep;
-		long cx;
-		final long dStep;
-		long dx;
+		final long aStep, bStep, cStep, dStep;
+		long ax, bx, cx, dx;
 
 		if (ax0 == ax1) {
 			ax = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			aStep = 0;
 		} else {
-			final int ady = ay1 - ay0;
-			final int adx = ax1 - ax0;
-			final long an = (((long) adx) << 16) / ady;
+			final long an = (((long) (ax1 - ax0)) << 16) / (ay1 - ay0);
 			aStep = an << PRECISION_BITS;
 			ax = ((long) ax0 << 16) - an * ay0 + aStep * y0 + 0x100000L;
 		}
@@ -1068,9 +1041,7 @@ public abstract class AbstractRasterizer {
 			bx = ((bx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			bStep = 0;
 		} else {
-			final int bdx = bx1 - bx0;
-			final int bdy = by1 - by0;
-			final long bn = (((long) bdx) << 16) / bdy;
+			final long bn = (((long) (bx1 - bx0)) << 16) / (by1 - by0);
 			bStep = bn << PRECISION_BITS;
 			bx = ((long) bx0 << 16) - bn * by0 + bStep * y0 + 0x100000L;
 		}
@@ -1079,9 +1050,7 @@ public abstract class AbstractRasterizer {
 			cx = ((cx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			cStep = 0;
 		} else {
-			final int cdx = cx1 - cx0;
-			final int cdy = cy1 - cy0;
-			final long cn = (((long) cdx) << 16) / cdy;
+			final long cn = (((long) (cx1 - cx0)) << 16) / (cy1 - cy0);
 			cStep = cn << PRECISION_BITS;
 			cx = ((long) cx0 << 16) - cn * cy0 + cStep * y0 + 0x100000L;
 		}
@@ -1090,19 +1059,15 @@ public abstract class AbstractRasterizer {
 			dx = ((dx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			dStep = 0;
 		} else {
-			final int ddx = dx1 - dx0;
-			final int ddy = dy1 - dy0;
-			final long dn = (((long) ddx) << 16) / ddy;
+			final long dn = (((long) (dx1 - dx0)) << 16) / (dy1 - dy0);
 			dStep = dn << PRECISION_BITS;
 			dx = ((long) dx0 << 16) - dn * dy0 + dStep * y0 + 0x100000L;
 		}
 
 		for (int y = (y0 << 1); y <= limit; y += 2) {
-			long x = ax > bx ? ax : bx;
-			if (cx > x) x = cx;
-			if (dx > x) x = dx;
-
-			eventData[y] = (int) (x >> 20);
+			final long i = ax > bx ? ax : bx;
+			final long j = cx > dx ? cx : dx;
+			eventData[y] = (int) ((i > j ? i : j) >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1129,18 +1094,14 @@ public abstract class AbstractRasterizer {
 		// difference from left: is high index in pairs
 		final int limit = eventLimit + 1;
 
-		final long aStep;
-		long ax;
-		final long bStep;
-		long bx;
+		final long aStep, bStep;
+		long ax, bx;
 
 		if (ax0 == ax1) {
 			ax = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			aStep = 0;
 		} else {
-			final int ady = ay1 - ay0;
-			final int adx = ax1 - ax0;
-			final long an = (((long) adx) << 16) / ady;
+			final long an = (((long) (ax1 - ax0)) << 16) / (ay1 - ay0);
 			aStep = an << PRECISION_BITS;
 			// difference from left: rounding looses tie
 			ax = ((long) ax0 << 16) - an * ay0 + aStep * y0 + 0x7FFFFL;
@@ -1150,9 +1111,7 @@ public abstract class AbstractRasterizer {
 			bx = ((bx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			bStep = 0;
 		} else {
-			final int bdx = bx1 - bx0;
-			final int bdy = by1 - by0;
-			final long bn = (((long) bdx) << 16) / bdy;
+			final long bn = (((long) (bx1 - bx0)) << 16) / (by1 - by0);
 			bStep = bn << PRECISION_BITS;
 			// difference from left: rounding looses tie
 			bx = ((long) bx0 << 16) - bn * by0 + bStep * y0 + 0x7FFFFL;
@@ -1193,20 +1152,14 @@ public abstract class AbstractRasterizer {
 		// difference from left: is high index in pairs
 		final int limit = eventLimit + 1;
 
-		final long aStep;
-		long ax;
-		final long bStep;
-		long bx;
-		final long cStep;
-		long cx;
+		final long aStep, bStep, cStep;
+		long ax, bx, cx;
 
 		if (ax0 == ax1) {
 			ax = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			aStep = 0;
 		} else {
-			final int ady = ay1 - ay0;
-			final int adx = ax1 - ax0;
-			final long an = (((long) adx) << 16) / ady;
+			final long an = (((long) (ax1 - ax0)) << 16) / (ay1 - ay0);
 			aStep = an << PRECISION_BITS;
 			// difference from left: rounding looses tie
 			ax = ((long) ax0 << 16) - an * ay0 + aStep * y0 + 0x7FFFFL;
@@ -1216,9 +1169,7 @@ public abstract class AbstractRasterizer {
 			bx = ((bx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			bStep = 0;
 		} else {
-			final int bdx = bx1 - bx0;
-			final int bdy = by1 - by0;
-			final long bn = (((long) bdx) << 16) / bdy;
+			final long bn = (((long) (bx1 - bx0)) << 16) / (by1 - by0);
 			bStep = bn << PRECISION_BITS;
 			// difference from left: rounding looses tie
 			bx = ((long) bx0 << 16) - bn * by0 + bStep * y0 + 0x7FFFFL;
@@ -1228,9 +1179,7 @@ public abstract class AbstractRasterizer {
 			cx = ((cx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			cStep = 0;
 		} else {
-			final int cdx = cx1 - cx0;
-			final int cdy = cy1 - cy0;
-			final long cn = (((long) cdx) << 16) / cdy;
+			final long cn = (((long) (cx1 - cx0)) << 16) / (cy1 - cy0);
 			cStep = cn << PRECISION_BITS;
 			// difference from left: rounding looses tie
 			cx = ((long) cx0 << 16) - cn * cy0 + cStep * y0 + 0x7FFFFL;
@@ -1279,22 +1228,14 @@ public abstract class AbstractRasterizer {
 		// difference from left: is high index in pairs
 		final int limit = eventLimit + 1;
 
-		final long aStep;
-		long ax;
-		final long bStep;
-		long bx;
-		final long cStep;
-		long cx;
-		final long dStep;
-		long dx;
+		final long aStep, bStep, cStep, dStep;
+		long ax, bx, cx, dx;
 
 		if (ax0 == ax1) {
 			ax = ((ax0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			aStep = 0;
 		} else {
-			final int ady = ay1 - ay0;
-			final int adx = ax1 - ax0;
-			final long an = (((long) adx) << 16) / ady;
+			final long an = (((long) (ax1 - ax0)) << 16) / (ay1 - ay0);
 			aStep = an << PRECISION_BITS;
 			// difference from left: rounding looses tie
 			ax = ((long) ax0 << 16) - an * ay0 + aStep * y0 + 0x7FFFFL;
@@ -1304,9 +1245,7 @@ public abstract class AbstractRasterizer {
 			bx = ((bx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			bStep = 0;
 		} else {
-			final int bdx = bx1 - bx0;
-			final int bdy = by1 - by0;
-			final long bn = (((long) bdx) << 16) / bdy;
+			final long bn = (((long) (bx1 - bx0)) << 16) / (by1 - by0);
 			bStep = bn << PRECISION_BITS;
 			// difference from left: rounding looses tie
 			bx = ((long) bx0 << 16) - bn * by0 + bStep * y0 + 0x7FFFFL;
@@ -1316,9 +1255,7 @@ public abstract class AbstractRasterizer {
 			cx = ((cx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			cStep = 0;
 		} else {
-			final int cdx = cx1 - cx0;
-			final int cdy = cy1 - cy0;
-			final long cn = (((long) cdx) << 16) / cdy;
+			final long cn = (((long) (cx1 - cx0)) << 16) / (cy1 - cy0);
 			cStep = cn << PRECISION_BITS;
 			// difference from left: rounding looses tie
 			cx = ((long) cx0 << 16) - cn * cy0 + cStep * y0 + 0x7FFFFL;
@@ -1328,9 +1265,7 @@ public abstract class AbstractRasterizer {
 			dx = ((dx0 + SCANT_PRECISE_PIXEL_CENTER) >> PRECISION_BITS) << 20;
 			dStep = 0;
 		} else {
-			final int ddx = dx1 - dx0;
-			final int ddy = dy1 - dy0;
-			final long dn = (((long) ddx) << 16) / ddy;
+			final long dn = (((long) (dx1 - dx0)) << 16) / (dy1 - dy0);
 			dStep = dn << PRECISION_BITS;
 			// difference from left: rounding looses tie
 			dx = ((long) dx0 << 16) - dn * dy0 + dStep * y0 + 0x7FFFFL;
