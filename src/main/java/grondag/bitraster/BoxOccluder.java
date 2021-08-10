@@ -1008,7 +1008,7 @@ public abstract class BoxOccluder {
 		return hasNearOccluders;
 	}
 
-	final MicroTimer timer = new MicroTimer("boxTests.apply", 500000);
+	//final MicroTimer timer = new MicroTimer("boxTests.apply", 500000);
 
 	public abstract boolean isBoxVisible(int packedBox, int fuzz);
 
@@ -1158,9 +1158,9 @@ public abstract class BoxOccluder {
 			}
 		}
 
-		timer.start();
+		//timer.start();
 		boxDraws[outcome].apply(x0, y0, z0, x1, y1, z1);
-		timer.stop(false);
+		//timer.stop(false);
 	}
 
 	public final void occlude(int[] visData) {
