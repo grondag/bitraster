@@ -610,9 +610,7 @@ public abstract class AbstractRasterizer {
 	}
 
 	final void drawQuad(int v0, int v1, int v2, int v3) {
-		final int boundsResult = prepareBounds(v0, v1, v2, v3);
-
-		if (boundsResult == BOUNDS_OUTSIDE_OR_TOO_SMALL) {
+		if (prepareBounds(v0, v1, v2, v3) == BOUNDS_OUTSIDE_OR_TOO_SMALL) {
 			return;
 		}
 
@@ -625,9 +623,7 @@ public abstract class AbstractRasterizer {
 	}
 
 	final boolean isQuadPartiallyClear(int v0, int v1, int v2, int v3) {
-		final int boundsResult = prepareBounds(v0, v1, v2, v3);
-
-		if (boundsResult == BOUNDS_OUTSIDE_OR_TOO_SMALL) {
+		if (prepareBounds(v0, v1, v2, v3) == BOUNDS_OUTSIDE_OR_TOO_SMALL) {
 			return false;
 		}
 
@@ -645,13 +641,16 @@ public abstract class AbstractRasterizer {
 		final int minTileX = minPixelX >> TILE_AXIS_SHIFT;
 		final int maxTileX = maxPixelX >> TILE_AXIS_SHIFT;
 		final int maxTileY = (maxPixelY >> TILE_AXIS_SHIFT) << TILE_WIDTH_BITS;
+		final long[] tiles = this.tiles;
 
 		int tileIndex = tileIndexFromPixelXY(minPixelX, minPixelY);
 		int xLimit = maxTileX;
 		int xInc = 1;
 
 		while (true) {
-			if (isQuadPartiallyClearInner(tileIndex)) {
+			final long word = tiles[tileIndex];
+
+			if(word != -1L && (~word & computeTileCoverage(tileIndex)) != 0) {
 				return true;
 			}
 
@@ -672,21 +671,8 @@ public abstract class AbstractRasterizer {
 		}
 	}
 
-	final boolean isQuadPartiallyClearInner(int tileIndex) {
-		final long word = tiles[tileIndex];
-
-		// nothing to test if fully occluded
-		if (word == -1L) {
-			return false;
-		}
-
-		return (~word & computeTileCoverage(tileIndex)) != 0;
-	}
-
 	final boolean isQuadPartiallyOccluded(int v0, int v1, int v2, int v3) {
-		final int boundsResult = prepareBounds(v0, v1, v2, v3);
-
-		if (boundsResult == BOUNDS_OUTSIDE_OR_TOO_SMALL) {
+		if (prepareBounds(v0, v1, v2, v3) == BOUNDS_OUTSIDE_OR_TOO_SMALL) {
 			return false;
 		}
 
@@ -704,13 +690,16 @@ public abstract class AbstractRasterizer {
 		final int minTileX = minPixelX >> TILE_AXIS_SHIFT;
 		final int maxTileX = maxPixelX >> TILE_AXIS_SHIFT;
 		final int maxTileY = (maxPixelY >> TILE_AXIS_SHIFT) << TILE_WIDTH_BITS;
+		final long[] tiles = this.tiles;
 
 		int tileIndex = tileIndexFromPixelXY(minPixelX, minPixelY);
 		int xLimit = maxTileX;
 		int xInc = 1;
 
 		while (true) {
-			if (isQuadPartiallyOccludedInner(tileIndex)) {
+			final long word = tiles[tileIndex];
+
+			if (word != 0 && (word & computeTileCoverage(tileIndex)) != 0) {
 				return true;
 			}
 
@@ -731,28 +720,24 @@ public abstract class AbstractRasterizer {
 		}
 	}
 
-	final boolean isQuadPartiallyOccludedInner(int tileIndex) {
-		final long word = tiles[tileIndex];
-
-		// nothing to test if fully clear
-		if (word == 0) {
-			return false;
-		}
-
-		return (word & computeTileCoverage(tileIndex)) != 0;
-	}
-
 	final void drawQuad() {
 		final int minTileX = minPixelX >> TILE_AXIS_SHIFT;
 		final int maxTileX = maxPixelX >> TILE_AXIS_SHIFT;
 		final int maxTileY = (maxPixelY >> TILE_AXIS_SHIFT) << TILE_WIDTH_BITS;
+		final long[] tiles = this.tiles;
 
 		int tileIndex = tileIndexFromPixelXY(minPixelX, minPixelY);
 		int xLimit = maxTileX;
 		int xInc = 1;
 
 		while (true) {
-			drawQuadInner(tileIndex);
+			long word = tiles[tileIndex];
+
+			// nothing to do if fully occluded
+			if (word != -1L) {
+				word |= computeTileCoverage(tileIndex);
+				tiles[tileIndex] = word;
+			}
 
 			if ((tileIndex & TILE_WIDTH_MASK) == xLimit) {
 				if ((tileIndex & TILE_HEIGHT_MASK) == maxTileY) {
@@ -768,16 +753,6 @@ public abstract class AbstractRasterizer {
 				// move left or right
 				tileIndex += xInc;
 			}
-		}
-	}
-
-	final void drawQuadInner(int tileIndex) {
-		long word = tiles[tileIndex];
-
-		// nothing to do if fully occluded
-		if (word != -1L) {
-			word |= computeTileCoverage(tileIndex);
-			tiles[tileIndex] = word;
 		}
 	}
 
