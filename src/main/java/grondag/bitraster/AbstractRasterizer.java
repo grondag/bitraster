@@ -925,9 +925,7 @@ public abstract class AbstractRasterizer {
 		}
 
 		for (int y = (y0 << 1); y <= limit; y += 2) {
-			final long x = ax > bx ? ax : bx;
-
-			eventData[y] = (int) (x >> 20);
+			eventData[y] = (int) ((ax > bx ? ax : bx) >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -987,10 +985,8 @@ public abstract class AbstractRasterizer {
 		}
 
 		for (int y = (y0 << 1); y <= limit; y += 2) {
-			long x = ax > bx ? ax : bx;
-			if (cx > x) x = cx;
-
-			eventData[y] = (int) (x >> 20);
+			final long i = ax > bx ? ax : bx;
+			eventData[y] = (int) ((cx > i ? cx : i) >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1120,9 +1116,7 @@ public abstract class AbstractRasterizer {
 		// difference from left: is high index in pairs
 		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
 			// difference from left: lower value wins
-			final long x = ax < bx ? ax : bx;
-
-			eventData[y] = (int) (x >> 20);
+			eventData[y] = (int) ((ax < bx ? ax : bx) >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1188,11 +1182,8 @@ public abstract class AbstractRasterizer {
 		// difference from left: is high index in pairs
 		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
 			// difference from left: lower value wins
-			long x = ax < bx ? ax : bx;
-
-			if (cx < x) x = cx;
-
-			eventData[y] = (int) (x >> 20);
+			final long i = ax < bx ? ax : bx;
+			eventData[y] = (int) ((cx < i ? cx : i) >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1274,12 +1265,9 @@ public abstract class AbstractRasterizer {
 		// difference from left: is high index in pairs
 		for (int y = (y0 << 1) + 1; y <= limit; y += 2) {
 			// difference from left: lower value wins
-			long x = ax < bx ? ax : bx;
-
-			if (cx < x) x = cx;
-			if (dx < x) x = dx;
-
-			eventData[y] = (int) (x >> 20);
+			final long i = ax < bx ? ax : bx;
+			final long j = cx < dx ? cx : dx;
+			eventData[y] = (int) ((i < j ? i : j) >> 20);
 
 			ax += aStep;
 			bx += bStep;
@@ -1353,7 +1341,6 @@ public abstract class AbstractRasterizer {
 			mask |= ((l < 0 ? 0xFF000000000000L : 0xFF000000000000L << l) & (r < 0 ? 0xFF000000000000L : 0xFF000000000000L >>> r));
 		}
 
-		// WIP: remove
 		//long bMask = computeTileCoverageB(tileIndex);
 		//
 		//if (bMask != mask) {
