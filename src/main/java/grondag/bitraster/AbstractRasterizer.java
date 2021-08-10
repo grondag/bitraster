@@ -1403,19 +1403,14 @@ public abstract class AbstractRasterizer {
 		// +1 to left shift because events are in pairs
 		final int baseEventIndex = (tileIndex >> TILE_WIDTH_BITS) << (TILE_AXIS_SHIFT + 1);
 		long mask = 0;
-		// distance from left, > 7 means empty
-		int l = data[baseEventIndex] - tileFirstX;
-		// distance from right, > 7 means empty
-		int r = tileLastX - data[baseEventIndex + 1];
+		// shift left or right, > 7 means no coverage
+		int l, r;
 
-		if (l < 8 && r < 8) {
+		if ((l = data[baseEventIndex] - tileFirstX) < 8 && (r = tileLastX - data[baseEventIndex + 1]) < 8) {
 			mask = (l < 0 ? 0xFFL : 0xFFL << l) & (r < 0 ? 0xFFL : 0xFFL >>> r);
 		}
 
-		l = data[baseEventIndex + 14] - tileFirstX;
-		r = tileLastX - data[baseEventIndex + 15];
-
-		if (l < 8 && r < 8) {
+		if ((l = data[baseEventIndex + 14] - tileFirstX) < 8 && (r = tileLastX - data[baseEventIndex + 15]) < 8) {
 			mask |= ((l < 0 ? 0xFF00000000000000L : 0xFF00000000000000L << l) & (r < 0 ? 0xFF00000000000000L : 0xFF00000000000000L >>> r));
 		}
 
@@ -1424,45 +1419,27 @@ public abstract class AbstractRasterizer {
 			return -1L;
 		}
 
-		l = data[baseEventIndex + 2] - tileFirstX;
-		r = tileLastX - data[baseEventIndex + 3];
-
-		if (l < 8 && r < 8) {
+		if ((l = data[baseEventIndex + 2] - tileFirstX) < 8 && (r = tileLastX - data[baseEventIndex + 3]) < 8) {
 			mask |= ((l < 0 ? 0xFF00L : 0xFF00L << l) & (r < 0 ? 0xFF00L : 0xFF00L >>> r));
 		}
 
-		l = data[baseEventIndex + 4] - tileFirstX;
-		r = tileLastX - data[baseEventIndex + 5];
-
-		if (l < 8 && r < 8) {
+		if ((l = data[baseEventIndex + 4] - tileFirstX) < 8 && (r = tileLastX - data[baseEventIndex + 5]) < 8) {
 			mask |= ((l < 0 ? 0xFF0000L : 0xFF0000L << l) & (r < 0 ? 0xFF0000L : 0xFF0000L >>> r));
 		}
 
-		l = data[baseEventIndex + 6] - tileFirstX;
-		r = tileLastX - data[baseEventIndex + 7];
-
-		if (l < 8 && r < 8) {
+		if ((l = data[baseEventIndex + 6] - tileFirstX) < 8 && (r = tileLastX - data[baseEventIndex + 7]) < 8) {
 			mask |= ((l < 0 ? 0xFF000000L : 0xFF000000L << l) & (r < 0 ? 0xFF000000L : 0xFF000000L >>> r));
 		}
 
-		l = data[baseEventIndex + 8] - tileFirstX;
-		r = tileLastX - data[baseEventIndex + 9];
-
-		if (l < 8 && r < 8) {
+		if ((l = data[baseEventIndex + 8] - tileFirstX) < 8 && (r = tileLastX - data[baseEventIndex + 9]) < 8) {
 			mask |= ((l < 0 ? 0xFF00000000L : 0xFF00000000L << l) & (r < 0 ? 0xFF00000000L : 0xFF00000000L >>> r));
 		}
 
-		l = data[baseEventIndex + 10] - tileFirstX;
-		r = tileLastX - data[baseEventIndex + 11];
-
-		if (l < 8 && r < 8) {
+		if ((l = data[baseEventIndex + 10] - tileFirstX) < 8 && (r = tileLastX - data[baseEventIndex + 11]) < 8) {
 			mask |= ((l < 0 ? 0xFF0000000000L : 0xFF0000000000L << l) & (r < 0 ? 0xFF0000000000L : 0xFF0000000000L >>> r));
 		}
 
-		l = data[baseEventIndex + 12] - tileFirstX;
-		r = tileLastX - data[baseEventIndex + 13];
-
-		if (l < 8 && r < 8) {
+		if ((l = data[baseEventIndex + 12] - tileFirstX) < 8 && (r = tileLastX - data[baseEventIndex + 13]) < 8) {
 			mask |= ((l < 0 ? 0xFF000000000000L : 0xFF000000000000L << l) & (r < 0 ? 0xFF000000000000L : 0xFF000000000000L >>> r));
 		}
 
