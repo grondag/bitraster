@@ -346,278 +346,278 @@ public abstract class BoxOccluder {
 		////
 
 		partiallyOccludedTests[0] = (x0, y0, z0, x1, y1, z1) -> {
-		  return false;
+			return false;
 		};
 
 		partiallyOccludedTests[UP] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V110, V010, V011, V111);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V110, V010, V011, V111);
 		};
 
 		partiallyOccludedTests[DOWN] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  return raster.isQuadPartiallyOccluded(V000, V100, V101, V001);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			return raster.isQuadPartiallyOccluded(V000, V100, V101, V001);
 		};
 
 		partiallyOccludedTests[EAST] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V101, V100, V110, V111);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V101, V100, V110, V111);
 		};
 
 		partiallyOccludedTests[WEST] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V000, V001, V011, V010);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			return raster.isQuadPartiallyOccluded(V000, V001, V011, V010);
 		};
 
 		partiallyOccludedTests[NORTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  return raster.isQuadPartiallyOccluded(V100, V000, V010, V110);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V110, x1, y1, z0);
+			return raster.isQuadPartiallyOccluded(V100, V000, V010, V110);
 		};
 
 		partiallyOccludedTests[SOUTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V001, V101, V111, V011);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V001, V101, V111, V011);
 		};
 
 		// NB: Split across two quads to give more evenly-sized test regions vs potentially one big and one very small
 		partiallyOccludedTests[UP | EAST] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V110, V010, V011, V111)
-		      || raster.isQuadPartiallyOccluded(V101, V100, V110, V111);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V110, V010, V011, V111)
+					|| raster.isQuadPartiallyOccluded(V101, V100, V110, V111);
 		};
 
 		partiallyOccludedTests[UP | WEST] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V110, V010, V011, V111)
-		      || raster.isQuadPartiallyOccluded(V000, V001, V011, V010);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V110, V010, V011, V111)
+					|| raster.isQuadPartiallyOccluded(V000, V001, V011, V010);
 		};
 
 		partiallyOccludedTests[UP | NORTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V110, V010, V011, V111)
-		      || raster.isQuadPartiallyOccluded(V100, V000, V010, V110);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V110, V010, V011, V111)
+					|| raster.isQuadPartiallyOccluded(V100, V000, V010, V110);
 		};
 
 		partiallyOccludedTests[UP | SOUTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V110, V010, V011, V111)
-		      || raster.isQuadPartiallyOccluded(V001, V101, V111, V011);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V110, V010, V011, V111)
+					|| raster.isQuadPartiallyOccluded(V001, V101, V111, V011);
 		};
 
 		partiallyOccludedTests[DOWN | EAST] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V000, V100, V101, V001)
-		      || raster.isQuadPartiallyOccluded(V101, V100, V110, V111);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V000, V100, V101, V001)
+					|| raster.isQuadPartiallyOccluded(V101, V100, V110, V111);
 		};
 
 		partiallyOccludedTests[DOWN | WEST] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  return raster.isQuadPartiallyOccluded(V000, V100, V101, V001)
-		      || raster.isQuadPartiallyOccluded(V000, V001, V011, V010);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			return raster.isQuadPartiallyOccluded(V000, V100, V101, V001)
+					|| raster.isQuadPartiallyOccluded(V000, V001, V011, V010);
 		};
 
 		partiallyOccludedTests[DOWN | NORTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  return raster.isQuadPartiallyOccluded(V000, V100, V101, V001)
-		      || raster.isQuadPartiallyOccluded(V100, V000, V010, V110);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			return raster.isQuadPartiallyOccluded(V000, V100, V101, V001)
+					|| raster.isQuadPartiallyOccluded(V100, V000, V010, V110);
 		};
 
 		partiallyOccludedTests[DOWN | SOUTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V000, V100, V101, V001)
-		      || raster.isQuadPartiallyOccluded(V001, V101, V111, V011);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V000, V100, V101, V001)
+					|| raster.isQuadPartiallyOccluded(V001, V101, V111, V011);
 		};
 
 		partiallyOccludedTests[NORTH | EAST] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V100, V000, V010, V110)
-		      || raster.isQuadPartiallyOccluded(V101, V100, V110, V111);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V100, V000, V010, V110)
+					|| raster.isQuadPartiallyOccluded(V101, V100, V110, V111);
 		};
 
 		partiallyOccludedTests[NORTH | WEST] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  return raster.isQuadPartiallyOccluded(V100, V000, V010, V110)
-		      || raster.isQuadPartiallyOccluded(V000, V001, V011, V010);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V110, x1, y1, z0);
+			return raster.isQuadPartiallyOccluded(V100, V000, V010, V110)
+					|| raster.isQuadPartiallyOccluded(V000, V001, V011, V010);
 		};
 
 		partiallyOccludedTests[SOUTH | EAST] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V001, V101, V111, V011)
-		      || raster.isQuadPartiallyOccluded(V101, V100, V110, V111);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V001, V101, V111, V011)
+					|| raster.isQuadPartiallyOccluded(V101, V100, V110, V111);
 		};
 
 		partiallyOccludedTests[SOUTH | WEST] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V001, V101, V111, V011)
-		      || raster.isQuadPartiallyOccluded(V000, V001, V011, V010);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V001, V101, V111, V011)
+					|| raster.isQuadPartiallyOccluded(V000, V001, V011, V010);
 		};
 
 		// NB: When three faces are visible, omit nearest vertex and draw two quads instead of three.
 
 		partiallyOccludedTests[UP | EAST | NORTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V011, V111, V101, V100)
-		      || raster.isQuadPartiallyOccluded(V100, V000, V010, V011);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V011, V111, V101, V100)
+					|| raster.isQuadPartiallyOccluded(V100, V000, V010, V011);
 		};
 
 		partiallyOccludedTests[UP | WEST | NORTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V111, V110, V100, V000)
-		      || raster.isQuadPartiallyOccluded(V000, V001, V011, V111);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V111, V110, V100, V000)
+					|| raster.isQuadPartiallyOccluded(V000, V001, V011, V111);
 		};
 
 		partiallyOccludedTests[UP | EAST | SOUTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  return raster.isQuadPartiallyOccluded(V010, V011, V001, V101)
-		      || raster.isQuadPartiallyOccluded(V101, V100, V110, V010);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			return raster.isQuadPartiallyOccluded(V010, V011, V001, V101)
+					|| raster.isQuadPartiallyOccluded(V101, V100, V110, V010);
 		};
 
 		partiallyOccludedTests[UP | WEST | SOUTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V110, V010, V000, V001)
-		      || raster.isQuadPartiallyOccluded(V001, V101, V111, V110);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V110, V010, V000, V001)
+					|| raster.isQuadPartiallyOccluded(V001, V101, V111, V110);
 		};
 
 		partiallyOccludedTests[DOWN | EAST | NORTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V001, V000, V010, V110)
-		      || raster.isQuadPartiallyOccluded(V110, V111, V101, V001);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V001, V000, V010, V110)
+					|| raster.isQuadPartiallyOccluded(V110, V111, V101, V001);
 		};
 
 		partiallyOccludedTests[DOWN | WEST | NORTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  return raster.isQuadPartiallyOccluded(V101, V001, V011, V010)
-		      || raster.isQuadPartiallyOccluded(V010, V110, V100, V101);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V110, x1, y1, z0);
+			return raster.isQuadPartiallyOccluded(V101, V001, V011, V010)
+					|| raster.isQuadPartiallyOccluded(V010, V110, V100, V101);
 		};
 
 		partiallyOccludedTests[DOWN | EAST | SOUTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V001, x0, y0, z1);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V110, x1, y1, z0);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V000, V100, V110, V111)
-		      || raster.isQuadPartiallyOccluded(V111, V011, V001, V000);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V001, x0, y0, z1);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V110, x1, y1, z0);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V000, V100, V110, V111)
+					|| raster.isQuadPartiallyOccluded(V111, V011, V001, V000);
 		};
 
 		partiallyOccludedTests[DOWN | WEST | SOUTH] = (x0, y0, z0, x1, y1, z1) -> {
-		  raster.setupVertex(V000, x0, y0, z0);
-		  raster.setupVertex(V010, x0, y1, z0);
-		  raster.setupVertex(V011, x0, y1, z1);
-		  raster.setupVertex(V100, x1, y0, z0);
-		  raster.setupVertex(V101, x1, y0, z1);
-		  raster.setupVertex(V111, x1, y1, z1);
-		  return raster.isQuadPartiallyOccluded(V100, V101, V111, V011)
-		      || raster.isQuadPartiallyOccluded(V011, V010, V000, V100);
+			raster.setupVertex(V000, x0, y0, z0);
+			raster.setupVertex(V010, x0, y1, z0);
+			raster.setupVertex(V011, x0, y1, z1);
+			raster.setupVertex(V100, x1, y0, z0);
+			raster.setupVertex(V101, x1, y0, z1);
+			raster.setupVertex(V111, x1, y1, z1);
+			return raster.isQuadPartiallyOccluded(V100, V101, V111, V011)
+					|| raster.isQuadPartiallyOccluded(V011, V010, V000, V100);
 		};
 
 		////
@@ -1003,7 +1003,7 @@ public abstract class BoxOccluder {
 	/**
 	 * True if occlusion includes geometry within the near region.
 	 * When true, simple movement distance test isn't sufficient for knowing if redraw is needed.
-	*/
+	 */
 	public final boolean hasNearOccluders() {
 		return hasNearOccluders;
 	}

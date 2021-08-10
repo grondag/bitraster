@@ -40,7 +40,7 @@ public final class OrthoRasterizer extends AbstractRasterizer {
 		data[baseIndex + PV_Y] = Float.floatToRawIntBits(ty);
 
 		final int px = Math.round(tx * HALF_PRECISE_WIDTH) + HALF_PRECISE_WIDTH;
-		final int py = Math.round(ty* HALF_PRECISE_HEIGHT) + HALF_PRECISE_HEIGHT;
+		final int py = Math.round(ty * HALF_PRECISE_HEIGHT) + HALF_PRECISE_HEIGHT;
 
 		data[baseIndex + PV_PX] = px;
 		data[baseIndex + PV_PY] = py;

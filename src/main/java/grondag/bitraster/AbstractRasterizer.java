@@ -650,7 +650,7 @@ public abstract class AbstractRasterizer {
 		while (true) {
 			final long word = tiles[tileIndex];
 
-			if(word != -1L && (~word & computeTileCoverage(tileIndex)) != 0) {
+			if (word != -1L && (~word & computeTileCoverage(tileIndex)) != 0) {
 				return true;
 			}
 
@@ -1276,7 +1276,7 @@ public abstract class AbstractRasterizer {
 		}
 	}
 
-	abstract void setupVertex(final int baseIndex, final int x, final int y, final int z);
+	abstract void setupVertex(int baseIndex, int x, int y, int z);
 
 	int needsNearClip(final int baseIndex) {
 		final int[] data = vertexData;
@@ -1353,7 +1353,6 @@ public abstract class AbstractRasterizer {
 
 		return mask;
 	}
-
 
 	public boolean isPixelClear(int x, int y) {
 		return (tiles[Indexer.tileIndexFromPixelXY(x, y)] & (1L << (Indexer.pixelIndex(x, y)))) == 0;

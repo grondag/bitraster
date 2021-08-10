@@ -255,5 +255,4 @@ public class Constants {
 	static final int VERTEX_DATA_LENGTH = IDX_DY1 + 1;
 
 	static final int EVENT_DATA_LENGTH = PIXEL_HEIGHT * 2;
-
 }
