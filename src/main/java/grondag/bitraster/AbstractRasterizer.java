@@ -1397,132 +1397,89 @@ public abstract class AbstractRasterizer {
 
 	long computeTileCoverage(int tileIndex) {
 		final int[] data = eventData;
-		final int tx = (tileIndex & TILE_WIDTH_MASK) << TILE_AXIS_SHIFT;
-		final int baseX = tx + 7;
+		final int tileFirstX = (tileIndex & TILE_WIDTH_MASK) << TILE_AXIS_SHIFT;
+		final int tileLastX = tileFirstX + 7;
 
 		// +1 to left shift because events are in pairs
 		final int baseEventIndex = (tileIndex >> TILE_WIDTH_BITS) << (TILE_AXIS_SHIFT + 1);
 		long mask = 0;
-		final int l0 = data[baseEventIndex] - tx;
-		final int r0 = baseX - data[baseEventIndex + 1];
+		// distance from left, > 7 means empty
+		int l = data[baseEventIndex] - tileFirstX;
+		// distance from right, > 7 means empty
+		int r = tileLastX - data[baseEventIndex + 1];
 
-		if (l0 < 8 && r0 < 8) {
-			long m = l0 <= 0 ? 0xFF : ((0xFF << l0) & 0xFF);
-
-			if (r0 > 0) {
-				m &= (0xFF >> r0);
-			}
-
-			mask = m;
+		if (l < 8 && r < 8) {
+			mask = (l < 0 ? 0xFFL : 0xFFL << l) & (r < 0 ? 0xFFL : 0xFFL >>> r);
 		}
 
-		final int l7 = data[baseEventIndex + 14] - tx;
-		final int r7 = baseX - data[baseEventIndex + 15];
+		l = data[baseEventIndex + 14] - tileFirstX;
+		r = tileLastX - data[baseEventIndex + 15];
 
-		if (l7 < 8 && r7 < 8) {
-			long m = l7 <= 0 ? 0xFF : ((0xFF << l7) & 0xFF);
-
-			if (r7 > 0) {
-				m &= (0xFF >> r7);
-			}
-
-			mask |= m << 56;
+		if (l < 8 && r < 8) {
+			mask |= ((l < 0 ? 0xFF00000000000000L : 0xFF00000000000000L << l) & (r < 0 ? 0xFF00000000000000L : 0xFF00000000000000L >>> r));
 		}
 
+		// Early exit when full coverage is detected
 		if (mask == 0xFF000000000000FFL) {
 			return -1L;
 		}
 
-		final int l1 = data[baseEventIndex + 2] - tx;
-		final int r1 = baseX - data[baseEventIndex + 3];
+		l = data[baseEventIndex + 2] - tileFirstX;
+		r = tileLastX - data[baseEventIndex + 3];
 
-		if (l1 < 8 && r1 < 8) {
-			long m = l1 <= 0 ? 0xFF : ((0xFF << l1) & 0xFF);
-
-			if (r1 > 0) {
-				m &= (0xFF >> r1);
-			}
-
-			mask |= m << 8;
+		if (l < 8 && r < 8) {
+			mask |= ((l < 0 ? 0xFF00L : 0xFF00L << l) & (r < 0 ? 0xFF00L : 0xFF00L >>> r));
 		}
 
-		final int l2 = data[baseEventIndex + 4] - tx;
-		final int r2 = baseX - data[baseEventIndex + 5];
+		l = data[baseEventIndex + 4] - tileFirstX;
+		r = tileLastX - data[baseEventIndex + 5];
 
-		if (l2 < 8 && r2 < 8) {
-			long m = l2 <= 0 ? 0xFF : ((0xFF << l2) & 0xFF);
-
-			if (r2 > 0) {
-				m &= (0xFF >> r2);
-			}
-
-			mask |= m << 16;
+		if (l < 8 && r < 8) {
+			mask |= ((l < 0 ? 0xFF0000L : 0xFF0000L << l) & (r < 0 ? 0xFF0000L : 0xFF0000L >>> r));
 		}
 
-		final int l3 = data[baseEventIndex + 6] - tx;
-		final int r3 = baseX - data[baseEventIndex + 7];
+		l = data[baseEventIndex + 6] - tileFirstX;
+		r = tileLastX - data[baseEventIndex + 7];
 
-		if (l3 < 8 && r3 < 8) {
-			long m = l3 <= 0 ? 0xFF : ((0xFF << l3) & 0xFF);
-
-			if (r3 > 0) {
-				m &= (0xFF >> r3);
-			}
-
-			mask |= m << 24;
+		if (l < 8 && r < 8) {
+			mask |= ((l < 0 ? 0xFF000000L : 0xFF000000L << l) & (r < 0 ? 0xFF000000L : 0xFF000000L >>> r));
 		}
 
-		final int l4 = data[baseEventIndex + 8] - tx;
-		final int r4 = baseX - data[baseEventIndex + 9];
+		l = data[baseEventIndex + 8] - tileFirstX;
+		r = tileLastX - data[baseEventIndex + 9];
 
-		if (l4 < 8 && r4 < 8) {
-			long m = l4 <= 0 ? 0xFF : ((0xFF << l4) & 0xFF);
-
-			if (r4 > 0) {
-				m &= (0xFF >> r4);
-			}
-
-			mask |= m << 32;
+		if (l < 8 && r < 8) {
+			mask |= ((l < 0 ? 0xFF00000000L : 0xFF00000000L << l) & (r < 0 ? 0xFF00000000L : 0xFF00000000L >>> r));
 		}
 
-		final int l5 = data[baseEventIndex + 10] - tx;
-		final int r5 = baseX - data[baseEventIndex + 11];
+		l = data[baseEventIndex + 10] - tileFirstX;
+		r = tileLastX - data[baseEventIndex + 11];
 
-		if (l5 < 8 && r5 < 8) {
-			long m = l5 <= 0 ? 0xFF : ((0xFF << l5) & 0xFF);
-
-			if (r5 > 0) {
-				m &= (0xFF >> r5);
-			}
-
-			mask |= m << 40;
+		if (l < 8 && r < 8) {
+			mask |= ((l < 0 ? 0xFF0000000000L : 0xFF0000000000L << l) & (r < 0 ? 0xFF0000000000L : 0xFF0000000000L >>> r));
 		}
 
-		final int l6 = data[baseEventIndex + 12] - tx;
-		final int r6 = baseX - data[baseEventIndex + 13];
+		l = data[baseEventIndex + 12] - tileFirstX;
+		r = tileLastX - data[baseEventIndex + 13];
 
-		if (l6 < 8 && r6 < 8) {
-			long m = l6 <= 0 ? 0xFF : ((0xFF << l6) & 0xFF);
-
-			if (r6 > 0) {
-				m &= (0xFF >> r6);
-			}
-
-			mask |= m << 48;
+		if (l < 8 && r < 8) {
+			mask |= ((l < 0 ? 0xFF000000000000L : 0xFF000000000000L << l) & (r < 0 ? 0xFF000000000000L : 0xFF000000000000L >>> r));
 		}
 
 		// WIP: remove
-		//long bMask = computeTileCoverageB();
+		//long bMask = computeTileCoverageB(tileIndex);
 		//
 		//if (bMask != mask) {
 		//	System.out.println("Prior");
 		//	Util.printMask(mask);
 		//	System.out.println("New");
 		//	Util.printMask(bMask);
+		//	computeTileCoverageB(tileIndex);
 		//}
 
 		return mask;
 	}
+
 
 	public boolean isPixelClear(int x, int y) {
 		return (tiles[Indexer.tileIndexFromPixelXY(x, y)] & (1L << (Indexer.pixelIndex(x, y)))) == 0;
